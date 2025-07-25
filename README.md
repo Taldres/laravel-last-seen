@@ -36,15 +36,19 @@ This will create a `config/last-seen.php` file where you can adjust thresholds a
 
 You can also copy the example environment variables from `.env.example` to your `.env` file.
 
-## Migration
+## Configuration and Migration Publishing
 
-Publish the migration to add the `last_seen` column to your users table:
+To publish both the configuration file and the migration, run:
 
 ```bash
-php artisan vendor:publish --provider="Taldres\\LastSeen\\LastSeenServiceProvider" --tag="migrations"
+php artisan vendor:publish --provider="Taldres\\LastSeen\\LastSeenServiceProvider"
 ```
 
-Run the migration:
+This will copy both the configuration and the migration into your project.
+
+## Migration
+
+After publishing, run the migration to update your database schema:
 
 ```bash
 php artisan migrate

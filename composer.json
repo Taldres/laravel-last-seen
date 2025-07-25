@@ -1,46 +1,47 @@
 {
-    "name": "taldres/laravel-last-seen",
-    "description": "Laravel package to track user's last seen status.",
-    "type": "library",
-    "license": "MIT",
-    "authors": [
-        {
-            "name": "Dennis Petersmann",
-            "email": "hey@taldres.dev"
-        }
-    ],
-    "require": {
-        "php": ">=8.3",
-        "illuminate/support": ">=12.0",
-        "illuminate/database": ">=12.0"
-    },
-    "autoload": {
-        "psr-4": {
-            "Taldres\\LastSeen\\": "src/"
-        }
-    },
-    "extra": {
-        "laravel": {
-            "providers": [
-              "Taldres\\LastSeen\\LastSeenServiceProvider"
-            ]
-        }
-    },
-    "require-dev": {
-        "larastan/larastan": "^3.6.0",
-        "laravel/pint": "^1.24.0",
-        "orchestra/testbench": "^10.4",
-        "pestphp/pest": "^3.8.2"
-    },
-    "minimum-stability": "dev",
-    "prefer-stable": true,
-    "config": {
-        "sort-packages": true,
-        "preferred-install": "dist",
-        "optimize-autoloader": true,
-        "allow-plugins": {
-            "pestphp/pest-plugin": true,
-            "larastan/larastan": true
-        }
+  "name": "taldres/laravel-last-seen",
+  "description": "Laravel package to track user's last seen status.",
+  "type": "library",
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "Dennis Petersmann",
+      "email": "hey@taldres.dev"
     }
+  ],
+  "require": {
+    "php": ">=8.3",
+    "illuminate/support": ">=12.0",
+    "illuminate/database": ">=12.0",
+    "illuminate/filesystem": ">=12.0"
+  },
+  "autoload": {
+    "psr-4": {
+      "Taldres\\LastSeen\\": "src/"
+    }
+  },
+  "extra": {
+    "laravel": {
+      "providers": [
+        "Taldres\\LastSeen\\LastSeenServiceProvider"
+      ]
+    }
+  },
+  "require-dev": {
+    "larastan/larastan": "^3.6.0",
+    "laravel/pint": "^1.24.0",
+    "orchestra/testbench": "^10.4",
+    "pestphp/pest": "^3.8.2"
+  },
+  "minimum-stability": "dev",
+  "prefer-stable": true,
+  "config": {
+    "sort-packages": true,
+    "preferred-install": "dist",
+    "optimize-autoloader": true,
+    "allow-plugins": {
+      "pestphp/pest-plugin": true,
+      "larastan/larastan": true
+    }
+  }
 }

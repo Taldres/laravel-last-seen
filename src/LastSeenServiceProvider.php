@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Taldres\LastSeen;
 
+use Illuminate\Filesystem\Filesystem;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 use Taldres\LastSeen\Listeners\LastSeenSubscriber;
@@ -39,10 +41,24 @@ class LastSeenServiceProvider extends ServiceProvider
             __DIR__.'/../config/last-seen.php' => config_path('last-seen.php'),
         ], 'config');
 
-        if (! class_exists('AddLastSeenToUsersTable') && $this->app->runningInConsole()) {
-            $this->publishes([
-                __DIR__.'/../database/migrations/add_last_seen_to_users_table.php.stub' => $this->app->databasePath().DIRECTORY_SEPARATOR.'migrations'.DIRECTORY_SEPARATOR.date('Y_m_d_His').'_add_last_seen_to_users_table.php',
-            ], 'migrations');
-        }
+        $this->publishes([
+            __DIR__.'/../database/migrations/add_last_seen_to_users_table.php.stub' => $this->getMigrationFileName('add_last_seen_to_users_table.php'),
+        ], 'migrations');
+    }
+
+    /**
+     * Returns existing migration file if found, else uses the current timestamp.
+     * Thanks to Spatie for this function.
+     */
+    protected function getMigrationFileName(string $migrationFileName): string
+    {
+        $timestamp = date('Y_m_d_His');
+
+        $filesystem = $this->app->make(Filesystem::class);
+
+        return Collection::make([$this->app->databasePath().DIRECTORY_SEPARATOR.'migrations'.DIRECTORY_SEPARATOR])
+            ->flatMap(fn ($path) => $filesystem->glob($path.'*_'.$migrationFileName))
+            ->push($this->app->databasePath()."/migrations/{$timestamp}_{$migrationFileName}")
+            ->first();
     }
 }

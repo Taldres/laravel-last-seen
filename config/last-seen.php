@@ -14,7 +14,7 @@ return [
     // This helps to avoid excessive database writes when users are active.
     'update_threshold' => (int) env('LAST_SEEN_UPDATE_THRESHOLD', 60),
 
-    // The number of seconds a user is considered online after their last_seen timestamp has been updated.
-    // If the difference between now and last_seen is less than this value, the user is considered online.
-    'online_indicator' => (int) env('LAST_SEEN_ONLINE_INDICATOR', 300),
+    // The number of seconds a user is considered recently seen after their last activity.
+    // If the difference between now and last_seen is less than this value, the user is considered recently active.
+    'recently_seen_threshold' => (int) env('LAST_SEEN_RECENTLY_SEEN_THRESHOLD', 300),
 ];

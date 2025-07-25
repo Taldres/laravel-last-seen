@@ -40,19 +40,19 @@ trait LastSeen
         }
     }
 
-    public function isOnline(): bool
+    public function recentlySeen(): bool
     {
-        $indicator = (int) config('last-seen.online_indicator', 300);
+        $threshold = (int) config('last-seen.recently_seen_threshold', 300);
 
-        return $this->last_seen && $this->last_seen->diffInSeconds(now()) < $indicator;
+        return $this->last_seen && $this->last_seen->diffInSeconds(now()) < $threshold;
     }
 
     #[Scope]
-    protected function onlyOnline(Builder $builder): void
+    protected function onlyRecentlySeen(Builder $builder): void
     {
-        $indicator = (int) config('last-seen.online_indicator', 300);
+        $threshold = (int) config('last-seen.recently_seen_threshold', 300);
 
         $builder->whereNotNull('last_seen')
-            ->where('last_seen', '>=', now()->subSeconds($indicator));
+            ->where('last_seen', '>=', now()->subSeconds($threshold));
     }
 }

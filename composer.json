@@ -1,6 +1,6 @@
 {
     "name": "taldres/laravel-last-seen",
-    "description": "Laravel package to track user's last seen and online status.",
+    "description": "Laravel package to track user's last seen status.",
     "type": "library",
     "license": "MIT",
     "authors": [

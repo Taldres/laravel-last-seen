@@ -36,8 +36,8 @@ class ServiceProvider extends \Illuminate\Support\ServiceProvider
             throw new \RuntimeException('Configured update_threshold must be an integer.');
         }
 
-        if (! isset($config['online_indicator']) || ! is_int($config['online_indicator'])) {
-            throw new \RuntimeException('Configured online_indicator must be an integer.');
+        if (! isset($config['recently_seen_threshold']) || ! is_int($config['recently_seen_threshold'])) {
+            throw new \RuntimeException('Configured recently_seen_threshold must be an integer.');
         }
     }
 }

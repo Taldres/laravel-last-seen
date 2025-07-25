@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
-class UserSeenEvent
+class UserWasActiveEvent
 {
     use Dispatchable, SerializesModels;
 

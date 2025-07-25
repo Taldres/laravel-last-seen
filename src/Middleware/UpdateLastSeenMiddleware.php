@@ -8,7 +8,7 @@ use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Symfony\Component\HttpFoundation\Response;
-use Taldres\LastSeen\Events\UserSeenEvent;
+use Taldres\LastSeen\Events\UserWasActiveEvent;
 
 class UpdateLastSeenMiddleware
 {
@@ -29,7 +29,7 @@ class UpdateLastSeenMiddleware
             return $next($request);
         }
 
-        event(new UserSeenEvent($user));
+        event(new UserWasActiveEvent($user));
 
         return $next($request);
     }

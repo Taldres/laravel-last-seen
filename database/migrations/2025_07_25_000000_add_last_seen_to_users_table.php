@@ -1,0 +1,48 @@
+<?php
+
+declare(strict_types=1);
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    private string $tableName;
+
+    public function __construct()
+    {
+        $modelClassName = config('last-seen.user_model', null);
+
+        if (empty($modelClassName) || ! class_exists($modelClassName)) {
+            throw new \InvalidArgumentException('The user model must be set in the last-seen configuration file.');
+        }
+
+        $userModel = new $modelClassName;
+
+        if (! $userModel instanceof Model) {
+            throw new \InvalidArgumentException('The user model must be set in the last-seen configuration file.');
+        }
+
+        $this->tableName = $userModel->getTable();
+    }
+
+    public function up(): void
+    {
+        Schema::table($this->tableName, function (Blueprint $table) {
+            if (! Schema::hasColumn($this->tableName, 'last_seen')) {
+                $table->timestamp('last_seen')->nullable();
+            }
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::table($this->tableName, function (Blueprint $table) {
+            if (Schema::hasColumn($this->tableName, 'last_seen')) {
+                $table->dropColumn('last_seen');
+            }
+        });
+    }
+};

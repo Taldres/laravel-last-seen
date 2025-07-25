@@ -1,0 +1,19 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+    - vendor/nesbot/carbon/extension.neon
+
+parameters:
+    paths:
+        - src
+        - config
+        - database
+    level: 8
+    ignoreErrors:
+        - '#^Class App\\Models\\User not found.#'
+        -
+            message: "#^Called 'env' outside of the config directory which returns null when the config is cached, use 'config'.$#"
+            path: *config/*.php
+        #- '#^Access to an undefined property Illuminate\\Foundation\\Auth\\User::\$last_seen.#'
+        -
+            identifier: trait.unused
+

@@ -22,7 +22,7 @@
     "extra": {
         "laravel": {
             "providers": [
-              "LastSeenServiceProvider"
+              "Taldres\\LastSeen\\LastSeenServiceProvider"
             ]
         }
     },

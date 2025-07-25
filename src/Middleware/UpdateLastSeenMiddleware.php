@@ -7,6 +7,7 @@ namespace Taldres\LastSeen\Middleware;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Event;
 use Symfony\Component\HttpFoundation\Response;
 use Taldres\LastSeen\Events\UserWasActiveEvent;
 
@@ -29,7 +30,7 @@ class UpdateLastSeenMiddleware
             return $next($request);
         }
 
-        event(new UserWasActiveEvent($user));
+        Event::dispatch(new UserWasActiveEvent($user));
 
         return $next($request);
     }

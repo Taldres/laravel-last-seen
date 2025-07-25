@@ -5,9 +5,10 @@ declare(strict_types=1);
 namespace Taldres\LastSeen;
 
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\ServiceProvider;
 use Taldres\LastSeen\Listeners\LastSeenSubscriber;
 
-class ServiceProvider extends \Illuminate\Support\ServiceProvider
+class LastSeenServiceProvider extends ServiceProvider
 {
     public function boot(): void
     {
@@ -15,7 +16,9 @@ class ServiceProvider extends \Illuminate\Support\ServiceProvider
             __DIR__.'/../config/last-seen.php' => config_path('last-seen.php'),
         ], 'config');
 
-        $this->loadMigrationsFrom(__DIR__.'/../database/migrations');
+        $this->publishes([
+            __DIR__.'/../database/migrations/' => database_path('migrations'),
+        ], 'migrations');
 
         Event::subscribe(LastSeenSubscriber::class);
     }

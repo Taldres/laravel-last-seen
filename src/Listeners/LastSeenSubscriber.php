@@ -19,7 +19,7 @@ class LastSeenSubscriber
 
     public function handle(UserSeenEvent $event): void
     {
-        if (!config('last-seen.enabled', true)) {
+        if (! config('last-seen.enabled', true)) {
             return;
         }
 

@@ -28,16 +28,16 @@ class ServiceProvider extends \Illuminate\Support\ServiceProvider
 
         $config = config('last-seen');
 
-        if (!isset($config['user_model']) || !class_exists($config['user_model'])) {
-            throw new \RuntimeException("Configured user_model does not exist: " . ($config['user_model'] ?? 'null'));
+        if (! isset($config['user_model']) || ! class_exists($config['user_model'])) {
+            throw new \RuntimeException('Configured user_model does not exist: '.($config['user_model'] ?? 'null'));
         }
 
-        if (!isset($config['update_threshold']) || !is_int($config['update_threshold'])) {
-            throw new \RuntimeException("Configured update_threshold must be an integer.");
+        if (! isset($config['update_threshold']) || ! is_int($config['update_threshold'])) {
+            throw new \RuntimeException('Configured update_threshold must be an integer.');
         }
 
-        if (!isset($config['online_indicator']) || !is_int($config['online_indicator'])) {
-            throw new \RuntimeException("Configured online_indicator must be an integer.");
+        if (! isset($config['online_indicator']) || ! is_int($config['online_indicator'])) {
+            throw new \RuntimeException('Configured online_indicator must be an integer.');
         }
     }
 }

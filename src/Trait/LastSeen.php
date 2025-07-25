@@ -25,7 +25,7 @@ trait LastSeen
 
     public function updateLastSeen(): void
     {
-        if (!config('last-seen.enabled', true)) {
+        if (! config('last-seen.enabled', true)) {
             return;
         }
 

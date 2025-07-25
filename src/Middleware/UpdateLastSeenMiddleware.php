@@ -8,6 +8,7 @@ use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Symfony\Component\HttpFoundation\Response;
+use Taldres\LastSeen\Events\UserSeenEvent;
 
 class UpdateLastSeenMiddleware
 {
@@ -21,21 +22,14 @@ class UpdateLastSeenMiddleware
         $user = Auth::user();
 
         if (! $user
-            || ! property_exists($user, 'last_seen')
+            || ! $user->hasAttribute('last_seen')
             || ! method_exists($user, 'updateLastSeen')
+            || ! config('last-seen.enabled', true)
         ) {
             return $next($request);
         }
 
-        if (!config('last-seen.enabled', true)) {
-            return $next($request);
-        }
-
-        $threshold = config('last-seen.update_threshold', 60);
-
-        if (! $user->last_seen || $user->last_seen->diffInSeconds(now()) > $threshold) {
-            $user->updateLastSeen();
-        }
+        event(new UserSeenEvent($user));
 
         return $next($request);
     }

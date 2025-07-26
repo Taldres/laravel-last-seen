@@ -1,3 +1,6 @@
+![Packagist Version](https://img.shields.io/packagist/v/taldres/laravel-last-seen)
+
+
 # Laravel Last Seen
 
 A simple Laravel package to track a user's last seen and recently seen status. This package provides traits, middleware, events, and configuration to easily record and query when a user was last active in your Laravel application.

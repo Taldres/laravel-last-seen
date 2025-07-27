@@ -13,7 +13,7 @@ class AddLastSeenToUsersTable extends Migration
 
     public function __construct()
     {
-        $modelClassName = config('last-seen.user_model', null);
+        $modelClassName = config('last-seen.models.user', null);
 
         if (empty($modelClassName) || ! class_exists($modelClassName)) {
             throw new \InvalidArgumentException('The user model must be set in the last-seen configuration file.');

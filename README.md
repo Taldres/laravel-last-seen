@@ -27,24 +27,27 @@ composer require taldres/laravel-last-seen
 Publish the configuration file:
 
 ```bash
-php artisan vendor:publish --provider="Taldres\\LastSeen\\LastSeenServiceProvider" --tag="config"
+php artisan vendor:publish --provider="Taldres\LastSeen\LastSeenServiceProvider" --tag="config"
 ```
 
-This will create a `config/last-seen.php` file where you can adjust thresholds and settings:
+This will create a `config/last-seen.php` file where you can adjust the User model:
 
-- `enabled`: Enables or disables the package globally. If disabled, only updating is deactivated; reading is still possible.
-- `user_model`: The User model class
-- `update_threshold`: Minimum seconds between last_seen updates
-- `recently_seen_threshold`: Seconds a user is considered recently seen after last activity
+- `user`: The fully qualified class name of the User model to be used for tracking last seen timestamps.
 
-You can also copy the example environment variables from `.env.example` to your `.env` file.
+All other settings—such as enabling/disabling the feature, update thresholds, and recently seen thresholds—can be controlled via environment variables in your `.env` file:
+
+- `LAST_SEEN_ENABLED`: Enables or disables the package globally (default: true)
+- `LAST_SEEN_UPDATE_THRESHOLD`: Minimum seconds between last_seen updates (default: 60)
+- `LAST_SEEN_RECENTLY_SEEN_THRESHOLD`: Seconds a user is considered recently seen after last activity (default: 300)
+
+Each setting has a default value, so you only need to override them if you want to change the default behavior.
 
 ## Configuration and Migration Publishing
 
 To publish both the configuration file and the migration, run:
 
 ```bash
-php artisan vendor:publish --provider="Taldres\\LastSeen\\LastSeenServiceProvider"
+php artisan vendor:publish --provider="Taldres\LastSeen\LastSeenServiceProvider"
 ```
 
 This will copy both the configuration and the migration into your project.
@@ -79,7 +82,7 @@ Add the middleware to your `web` or `api` middleware group or any other endpoint
 
 ```php
 // ...
-\Taldres\LastSeen\\Middleware\UpdateLastSeenMiddleware::class,
+\Taldres\LastSeen\Middleware\UpdateLastSeenMiddleware::class,
 // ...
 ```
 

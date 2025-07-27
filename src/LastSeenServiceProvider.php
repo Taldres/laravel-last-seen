@@ -39,11 +39,17 @@ class LastSeenServiceProvider extends ServiceProvider
 
         $this->publishes([
             __DIR__.'/../config/last-seen.php' => config_path('last-seen.php'),
-        ], 'config');
+        ], [
+            'last-seen-config',
+            'config',
+        ]);
 
         $this->publishes([
             __DIR__.'/../database/migrations/add_last_seen_to_users_table.php.stub' => $this->getMigrationFileName('add_last_seen_to_users_table.php'),
-        ], 'migrations');
+        ], [
+            'last-seen-migrations',
+            'migrations',
+        ]);
     }
 
     /**

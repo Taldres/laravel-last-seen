@@ -23,10 +23,10 @@ class LastSeenSubscriber
             return;
         }
 
-        if (! method_exists($event->user, 'updateLastSeen')) {
+        if (! method_exists($event->user, 'updateLastSeenAt')) {
             return;
         }
 
-        $event->user->updateLastSeen();
+        $event->user->updateLastSeenAt();
     }
 }

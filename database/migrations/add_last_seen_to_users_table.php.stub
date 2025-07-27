@@ -9,14 +9,34 @@ use Illuminate\Support\Facades\Schema;
 
 class AddLastSeenToUsersTable extends Migration
 {
-    private string $tableName;
+    public function up(): void
+    {
+        $tableName = $this->getTableName();
 
-    public function __construct()
+        Schema::table($tableName, static function (Blueprint $table) use ($tableName) {
+            if (! Schema::hasColumn($tableName, 'last_seen')) {
+                $table->timestamp('last_seen')->nullable();
+            }
+        });
+    }
+
+    public function down(): void
+    {
+        $tableName = $this->getTableName();
+
+        Schema::table($tableName, static function (Blueprint $table) use ($tableName) {
+            if (Schema::hasColumn($tableName, 'last_seen')) {
+                $table->dropColumn('last_seen');
+            }
+        });
+    }
+
+    private function getTableName(): string
     {
         $modelClassName = config('last-seen.models.user', null);
 
         if (empty($modelClassName) || ! class_exists($modelClassName)) {
-            throw new \InvalidArgumentException('The user model must be set in the last-seen configuration file.');
+            throw new \InvalidArgumentException('The user model must be set in the last-seen configuration file. Run [php artisan config:clear] and try again.');
         }
 
         $userModel = new $modelClassName;
@@ -25,24 +45,6 @@ class AddLastSeenToUsersTable extends Migration
             throw new \InvalidArgumentException('The user model must be set in the last-seen configuration file.');
         }
 
-        $this->tableName = $userModel->getTable();
+        return $userModel->getTable();
     }
-
-    public function up(): void
-    {
-        Schema::table($this->tableName, function (Blueprint $table) {
-            if (! Schema::hasColumn($this->tableName, 'last_seen')) {
-                $table->timestamp('last_seen')->nullable();
-            }
-        });
-    }
-
-    public function down(): void
-    {
-        Schema::table($this->tableName, function (Blueprint $table) {
-            if (Schema::hasColumn($this->tableName, 'last_seen')) {
-                $table->dropColumn('last_seen');
-            }
-        });
-    }
-};
+}

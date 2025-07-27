@@ -7,7 +7,7 @@ A simple Laravel package to track a user's last seen and recently seen status. T
 
 ## Features
 
-- Automatically update the `last_seen` timestamp for users
+- Automatically update the `last_seen_at` timestamp for users
 - Middleware to detect user activity
 - Event-based architecture for extensibility
 - Query scopes and helper methods to check if a user was recently seen
@@ -37,7 +37,7 @@ This will create a `config/last-seen.php` file where you can adjust the User mod
 All other settings—such as enabling/disabling the feature, update thresholds, and recently seen thresholds—can be controlled via environment variables in your `.env` file:
 
 - `LAST_SEEN_ENABLED`: Enables or disables the package globally (default: true)
-- `LAST_SEEN_UPDATE_THRESHOLD`: Minimum seconds between last_seen updates (default: 60)
+- `LAST_SEEN_UPDATE_THRESHOLD`: Minimum seconds between last_seen_at updates (default: 60)
 - `LAST_SEEN_RECENTLY_SEEN_THRESHOLD`: Seconds a user is considered recently seen after last activity (default: 300)
 
 Each setting has a default value, so you only need to override them if you want to change the default behavior.

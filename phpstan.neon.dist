@@ -13,7 +13,7 @@ parameters:
         -
             message: "#^Called 'env' outside of the config directory which returns null when the config is cached, use 'config'.$#"
             path: *config/*.php
-        #- '#^Access to an undefined property Illuminate\\Foundation\\Auth\\User::\$last_seen.#'
+        #- '#^Access to an undefined property Illuminate\\Foundation\\Auth\\User::\$last_seen_at.#'
         -
             identifier: trait.unused
 

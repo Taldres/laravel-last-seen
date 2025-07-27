@@ -45,7 +45,7 @@ class LastSeenServiceProvider extends ServiceProvider
         ]);
 
         $this->publishes([
-            __DIR__.'/../database/migrations/add_last_seen_to_users_table.php.stub' => $this->getMigrationFileName('add_last_seen_to_users_table.php'),
+            __DIR__.'/../database/migrations/add_last_seen_at_to_users_table.php.stub' => $this->getMigrationFileName('add_last_seen_at_to_users_table.php'),
         ], [
             'last-seen-migrations',
             'migrations',

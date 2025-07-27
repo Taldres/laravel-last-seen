@@ -15,11 +15,11 @@ trait LastSeen
 {
     public function initializeLastSeen(): void
     {
-        if (! in_array('last_seen', $this->fillable, true)) {
-            $this->fillable[] = 'last_seen';
+        if (! in_array('last_seen_at', $this->fillable, true)) {
+            $this->fillable[] = 'last_seen_at';
         }
-        if (! array_key_exists('last_seen', $this->casts)) {
-            $this->casts['last_seen'] = 'datetime';
+        if (! array_key_exists('last_seen_at', $this->casts)) {
+            $this->casts['last_seen_at'] = 'datetime';
         }
     }
 
@@ -31,9 +31,9 @@ trait LastSeen
 
         $threshold = (int) config('last-seen.update_threshold', 60);
 
-        if (! $this->last_seen || $this->last_seen->diffInSeconds(now()) > $threshold) {
+        if (! $this->last_seen_at || $this->last_seen_at->diffInSeconds(now()) > $threshold) {
             $this->updateQuietly([
-                'last_seen' => now(),
+                'last_seen_at' => now(),
             ], [
                 'timestamps' => false,
             ]);
@@ -44,7 +44,7 @@ trait LastSeen
     {
         $threshold = (int) config('last-seen.recently_seen_threshold', 300);
 
-        return $this->last_seen && $this->last_seen->diffInSeconds(now()) < $threshold;
+        return $this->last_seen_at && $this->last_seen_at->diffInSeconds(now()) < $threshold;
     }
 
     #[Scope]
@@ -52,7 +52,7 @@ trait LastSeen
     {
         $threshold = (int) config('last-seen.recently_seen_threshold', 300);
 
-        $builder->whereNotNull('last_seen')
-            ->where('last_seen', '>=', now()->subSeconds($threshold));
+        $builder->whereNotNull('last_seen_at')
+            ->where('last_seen_at', '>=', now()->subSeconds($threshold));
     }
 }

@@ -14,8 +14,8 @@ class AddLastSeenToUsersTable extends Migration
         $tableName = $this->getTableName();
 
         Schema::table($tableName, static function (Blueprint $table) use ($tableName) {
-            if (! Schema::hasColumn($tableName, 'last_seen')) {
-                $table->timestamp('last_seen')->nullable();
+            if (! Schema::hasColumn($tableName, 'last_seen_at')) {
+                $table->timestamp('last_seen_at')->nullable();
             }
         });
     }
@@ -25,8 +25,8 @@ class AddLastSeenToUsersTable extends Migration
         $tableName = $this->getTableName();
 
         Schema::table($tableName, static function (Blueprint $table) use ($tableName) {
-            if (Schema::hasColumn($tableName, 'last_seen')) {
-                $table->dropColumn('last_seen');
+            if (Schema::hasColumn($tableName, 'last_seen_at')) {
+                $table->dropColumn('last_seen_at');
             }
         });
     }

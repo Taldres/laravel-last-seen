@@ -32,7 +32,7 @@ php artisan vendor:publish --provider="Taldres\\LastSeen\\LastSeenServiceProvide
 
 This will create a `config/last-seen.php` file where you can adjust thresholds and settings:
 
-- `enabled`: Enable or disable the package globally
+- `enabled`: Enables or disables the package globally. If disabled, only updating is deactivated; reading is still possible.
 - `user_model`: The User model class
 - `update_threshold`: Minimum seconds between last_seen updates
 - `recently_seen_threshold`: Seconds a user is considered recently seen after last activity
@@ -61,10 +61,10 @@ php artisan migrate
 
 ### Add the Trait
 
-Add the `Taldres\\LastSeen\\Trait\\LastSeen` trait to your User model:
+Add the `Taldres\LastSeen\Trait\LastSeen` trait to your User model:
 
 ```php
-use Taldres\\LastSeen\\Trait\\LastSeen;
+use Taldres\LastSeen\Trait\LastSeen;
 
 class User extends Authenticatable
 {
@@ -75,11 +75,11 @@ class User extends Authenticatable
 
 ### Register the Middleware
 
-Add the middleware to your `web` or `api` middleware group:
+Add the middleware to your `web` or `api` middleware group or any other endpoint:
 
 ```php
 // ...
-\\Taldres\\LastSeen\\Middleware\\UpdateLastSeenMiddleware::class,
+\Taldres\LastSeen\\Middleware\UpdateLastSeenMiddleware::class,
 // ...
 ```
 

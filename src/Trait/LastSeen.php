@@ -7,6 +7,7 @@ namespace Taldres\LastSeen\Trait;
 use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Taldres\LastSeen\Enums\LastSeenDefaultThreshold;
 
 /**
  * @mixin(Model)
@@ -29,7 +30,7 @@ trait LastSeen
             return;
         }
 
-        $threshold = (int) config('last-seen.update_threshold', 60);
+        $threshold = (int) config('last-seen.update_threshold', LastSeenDefaultThreshold::Update->value);
 
         if (! $this->last_seen_at || $this->last_seen_at->diffInSeconds(now()) > $threshold) {
             $this->updateQuietly([
@@ -42,7 +43,7 @@ trait LastSeen
 
     public function recentlySeen(): bool
     {
-        $threshold = (int) config('last-seen.recently_seen_threshold', 300);
+        $threshold = (int) config('last-seen.recently_seen_threshold', LastSeenDefaultThreshold::RecentlySeen->value);
 
         return $this->last_seen_at && $this->last_seen_at->diffInSeconds(now()) < $threshold;
     }
@@ -50,7 +51,7 @@ trait LastSeen
     #[Scope]
     protected function onlyRecentlySeen(Builder $builder): void
     {
-        $threshold = (int) config('last-seen.recently_seen_threshold', 300);
+        $threshold = (int) config('last-seen.recently_seen_threshold', LastSeenDefaultThreshold::RecentlySeen->value);
 
         $builder->whereNotNull('last_seen_at')
             ->where('last_seen_at', '>=', now()->subSeconds($threshold));

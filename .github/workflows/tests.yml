@@ -1,12 +1,6 @@
 name: Tests
 
-on:
-  # Tests temporarily disabled
-  # push:
-  #   branches: [ main, develop ]
-  # pull_request:
-  #   branches: [ main, develop ]
-  workflow_dispatch: # Manual trigger only
+on: workflow_dispatch
 
 jobs:
   test:

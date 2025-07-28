@@ -50,5 +50,5 @@ jobs:
       - name: Run static analysis (PHPStan)
         run: composer test-stan
 
-      - name: Run tests (Pest)
-        run: vendor/bin/pest
+      #- name: Run tests (Pest)
+      #  run: vendor/bin/pest

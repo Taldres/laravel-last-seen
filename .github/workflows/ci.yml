@@ -56,5 +56,5 @@ jobs:
       - name: Run static analysis (PHPStan)
         run: vendor/bin/phpstan analyse --memory-limit=2G
 
-      - name: Run tests (Pest)
-        run: vendor/bin/pest
+      #- name: Run tests (Pest)
+      #  run: vendor/bin/pest

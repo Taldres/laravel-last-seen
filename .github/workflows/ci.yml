@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+
+    name: Continuous Integration
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: 8.3
+          extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite, bcmath, soap, intl, gd, exif, iconv, imagick, fileinfo
+          coverage: none
+
+      - name: Validate composer.json and composer.lock
+        run: composer validate --strict
+
+      - name: Cache Composer packages
+        id: composer-cache
+        uses: actions/cache@v3
+        with:
+          path: vendor
+          key: ${{ runner.os }}-php-${{ hashFiles('**/composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-php-
+
+      - name: Install dependencies
+        run: composer install --prefer-dist --no-interaction
+
+      - name: Run Pint (Auto-fix code style)
+        run: vendor/bin/pint
+
+      - name: Commit Pint fixes
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: 'fix: Apply Pint code style fixes'
+          file_pattern: '*.php'
+        if: github.event_name == 'push'
+
+      - name: Check code style (Pint)
+        run: vendor/bin/pint --test
+
+      - name: Run static analysis (PHPStan)
+        run: vendor/bin/phpstan analyse --memory-limit=2G
+
+      - name: Run tests (Pest)
+        run: vendor/bin/pest

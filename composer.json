@@ -10,10 +10,10 @@
     }
   ],
   "require": {
-    "php": ">=8.3",
-    "illuminate/support": "^12.0",
-    "illuminate/database": "^12.0",
-    "illuminate/filesystem": "^12.0"
+    "php": "^8.2",
+    "illuminate/support": "^v11.44.2|^12.0",
+    "illuminate/database": "^v11.44.2|^12.0",
+    "illuminate/filesystem": "^v11.44.2|^12.0"
   },
   "autoload": {
     "psr-4": {
@@ -30,7 +30,7 @@
   "require-dev": {
     "larastan/larastan": "^3.6.0",
     "laravel/pint": "^1.24.0",
-    "orchestra/testbench": "^10.4",
+    "orchestra/testbench": "^9.0|^10.4",
     "pestphp/pest": "^3.8.2"
   },
   "minimum-stability": "dev",

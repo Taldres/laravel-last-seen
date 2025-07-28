@@ -43,5 +43,13 @@
       "pestphp/pest-plugin": true,
       "larastan/larastan": true
     }
+  },
+  "scripts": {
+    "test-pint": [
+      "./vendor/bin/pint --test"
+    ],
+    "test-stan": [
+      "./vendor/bin/phpstan analyse --memory-limit=2G"
+    ]
   }
 }

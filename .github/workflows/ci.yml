@@ -45,10 +45,10 @@ jobs:
         run: composer install --prefer-dist --no-interaction
 
       - name: Check code style (Pint)
-        run: vendor/bin/pint --test
+        run: composer test-pint
 
       - name: Run static analysis (PHPStan)
-        run: vendor/bin/phpstan analyse --memory-limit=2G
+        run: composer test-stan
 
-      #- name: Run tests (Pest)
-      #  run: vendor/bin/pest
+      - name: Run tests (Pest)
+        run: vendor/bin/pest

@@ -20,7 +20,7 @@ beforeEach(function () {
 });
 
 it('set last_seen_at to current time when user updates last seen', function () {
-    $user = User::create(['email' => fake()->email]);
+    $user = User::create(['email' => fake()->email()]);
     expect($user->last_seen_at)->toBeNull();
 
     $user->updateLastSeenAt();
@@ -31,7 +31,7 @@ it('set last_seen_at to current time when user updates last seen', function () {
 });
 
 it('sets last_seen_at and recentlySeen returns true', function () {
-    $user = User::create(['email' => fake()->email]);
+    $user = User::create(['email' => fake()->email()]);
     expect($user->last_seen_at)->toBeNull();
 
     $user->updateLastSeenAt();
@@ -42,7 +42,7 @@ it('sets last_seen_at and recentlySeen returns true', function () {
 
 it('returns false for recentlySeen if last_seen_at is threshold+1 seconds in the past', function () {
     $user = User::create([
-        'email' => fake()->email,
+        'email' => fake()->email(),
         'last_seen_at' => now()->subSeconds(config('last-seen.recently_seen_threshold') + 1),
     ]);
     $user->refresh();
@@ -52,7 +52,7 @@ it('returns false for recentlySeen if last_seen_at is threshold+1 seconds in the
 it('updating should not be possible when the feature is disabled', function () {
     config(['last-seen.enabled' => false]);
 
-    $user = User::create(['email' => fake()->email]);
+    $user = User::create(['email' => fake()->email()]);
     expect($user->last_seen_at)->toBeNull();
 
     $user->updateLastSeenAt();

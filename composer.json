@@ -53,6 +53,9 @@
     "pint": [
       "./vendor/bin/pint"
     ],
+    "pest": [
+      "./vendor/bin/pest"
+    ],
     "test-pint": [
       "./vendor/bin/pint --test"
     ],

@@ -29,5 +29,9 @@
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
+        <env name="LAST_SEEN_ENABLED" value="true"/>
+        <env name="LAST_SEEN_USER_MODEL" value="App\\Models\\User"/>
+        <env name="LAST_SEEN_UPDATE_THRESHOLD" value="60"/>
+        <env name="LAST_SEEN_RECENTLY_SEEN_THRESHOLD" value="300"/>
     </php>
 </phpunit>

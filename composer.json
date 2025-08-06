@@ -20,6 +20,11 @@
       "Taldres\\LastSeen\\": "src/"
     }
   },
+  "autoload-dev": {
+    "psr-4": {
+      "Taldres\\LastSeen\\Tests\\": "tests/"
+    }
+  },
   "extra": {
     "laravel": {
       "providers": [
@@ -45,6 +50,12 @@
     }
   },
   "scripts": {
+    "pint": [
+      "./vendor/bin/pint"
+    ],
+    "pest": [
+      "./vendor/bin/pest"
+    ],
     "test-pint": [
       "./vendor/bin/pint --test"
     ],

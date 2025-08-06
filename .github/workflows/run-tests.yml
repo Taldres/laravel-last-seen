@@ -21,9 +21,5 @@ jobs:
           coverage: none
       - name: Install Composer dependencies
         run: composer install --prefer-dist --no-interaction --no-progress
-      - name: Generate application key
-        run: php artisan key:generate --env=testing
-      - name: Run migrations
-        run: php artisan migrate --env=testing --force
       - name: Run Pest tests
-        run: vendor/bin/pest --colors --parallel
+        run: vendor/bin/pest --parallel

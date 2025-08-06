@@ -51,6 +51,9 @@
     }
   },
   "scripts": {
+    "pint": [
+      "./vendor/bin/pint"
+    ],
     "test-pint": [
       "./vendor/bin/pint --test"
     ],

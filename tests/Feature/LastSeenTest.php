@@ -1,11 +1,13 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Taldres\LastSeen\Tests\Feature;
 
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Database\Schema\Blueprint;
-use Taldres\LastSeen\Tests\TestModels\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Schema;
+use Taldres\LastSeen\Tests\TestModels\User;
 
 uses(RefreshDatabase::class);
 

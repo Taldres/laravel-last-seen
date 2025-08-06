@@ -17,7 +17,13 @@
   },
   "autoload": {
     "psr-4": {
-      "Taldres\\LastSeen\\": "src/"
+      "Taldres\\LastSeen\\": "src/",
+      "Taldres\\LastSeen\\Tests\\": "tests/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "Taldres\\LastSeen\\Tests\\TestModels\\": "tests/TestModels/"
     }
   },
   "extra": {

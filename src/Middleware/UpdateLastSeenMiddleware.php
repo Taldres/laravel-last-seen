@@ -14,7 +14,7 @@ use Taldres\LastSeen\Events\UserWasActiveEvent;
 class UpdateLastSeenMiddleware
 {
     /**
-     * Handle an incoming request.
+     * Handle an incoming request and update the user's last seen timestamp if applicable.
      *
      * @param  Closure(Request): (Response)  $next
      */

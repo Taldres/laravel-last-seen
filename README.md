@@ -1,4 +1,4 @@
-![Packagist Version](https://img.shields.io/packagist/v/taldres/laravel-last-seen)
+[![Packagist Version](https://img.shields.io/packagist/v/taldres/laravel-last-seen)](https://packagist.org/packages/taldres/laravel-last-seen)
 ![Tests](https://github.com/Taldres/laravel-last-seen/actions/workflows/run-tests.yml/badge.svg)
 
 # Laravel Last Seen

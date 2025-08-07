@@ -11,11 +11,9 @@ use Illuminate\Support\Carbon;
 use Taldres\LastSeen\Enums\LastSeenDefaultThreshold;
 
 /**
- * @mixin(Model)
+ * @mixin Model
  *
  * @property Carbon|null $last_seen_at
- *
- * @method static Builder onlyRecentlySeen()
  */
 trait LastSeen
 {

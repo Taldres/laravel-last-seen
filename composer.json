@@ -52,6 +52,11 @@
     }
   },
   "scripts": {
+    "test": [
+      "./vendor/bin/pint",
+      "./vendor/bin/pest",
+      "./vendor/bin/phpstan analyse --memory-limit=2G"
+    ],
     "pint": [
       "./vendor/bin/pint"
     ],

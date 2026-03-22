@@ -21,10 +21,11 @@ PHP 8.2 or higher
 
 ### Supported Laravel Versions
 
-| Laravel Version | Package Version |
-|:----------------|:--------------------------|
-| `^11.15`        | `^0.2`                    |
-| `^12.0`         | `^0.2`                    |
+| Laravel Version | Package Version | PHP Version |
+|:----------------|:----------------|:------------|
+| `^11.15`        | `^0.2`          | `^8.2`      |
+| `^12.0`         | `^0.2`          | `^8.2`      |
+| `^13.0`         | `^0.4`          | `^8.3`      |
 
 ## Installation
 

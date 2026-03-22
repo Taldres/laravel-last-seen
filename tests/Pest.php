@@ -1,6 +1,8 @@
 <?php
 
 declare(strict_types=1);
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Taldres\LastSeen\Tests\TestCase;
 
 /*
 |--------------------------------------------------------------------------
@@ -13,6 +15,6 @@ declare(strict_types=1);
 |
 */
 
-pest()->extend(Taldres\LastSeen\Tests\TestCase::class)
-    ->use(Illuminate\Foundation\Testing\RefreshDatabase::class)
+pest()->extend(TestCase::class)
+    ->use(RefreshDatabase::class)
     ->in('Feature');

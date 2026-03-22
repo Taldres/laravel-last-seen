@@ -8,6 +8,7 @@ use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Schema;
 use Taldres\LastSeen\Tests\TestModels\User;
 
@@ -42,7 +43,7 @@ it('checks if last_seen_at is set to current time when user updates last seen', 
     $user->refresh();
 
     expect($user->last_seen_at)->not->toBeNull()
-        ->and($user->last_seen_at)->toBeInstanceOf(\Illuminate\Support\Carbon::class);
+        ->and($user->last_seen_at)->toBeInstanceOf(Carbon::class);
 });
 
 it('checks if recentlySeen returns true directly after setting', function () {
@@ -73,4 +74,53 @@ it('checks if updating should not be possible when the feature is disabled', fun
     $user->refresh();
 
     expect($user->last_seen_at)->toBeNull();
+});
+
+it('checks if onlyRecentlySeen scope returns only recently seen users', function () {
+    $recentUser = User::create([
+        'email' => fake()->email(),
+        'last_seen_at' => now(),
+    ]);
+
+    $staleUser = User::create([
+        'email' => fake()->email(),
+        'last_seen_at' => now()->subSeconds(config('last-seen.recently_seen_threshold') + 1),
+    ]);
+
+    $neverSeenUser = User::create([
+        'email' => fake()->email(),
+    ]);
+
+    $recentUsers = User::onlyRecentlySeen()->get();
+
+    expect($recentUsers)->toHaveCount(1)
+        ->and($recentUsers->first()->id)->toBe($recentUser->id);
+});
+
+it('checks if updateLastSeenAt does not update when within threshold', function () {
+    $initialTime = now()->subSeconds(10);
+
+    $user = User::create([
+        'email' => fake()->email(),
+        'last_seen_at' => $initialTime,
+    ]);
+
+    $user->updateLastSeenAt();
+    $user->refresh();
+
+    expect($user->last_seen_at->timestamp)->toBe($initialTime->timestamp);
+});
+
+it('checks if updateLastSeenAt updates when threshold is exceeded', function () {
+    $threshold = (int) config('last-seen.update_threshold');
+
+    $user = User::create([
+        'email' => fake()->email(),
+        'last_seen_at' => now()->subSeconds($threshold + 1),
+    ]);
+
+    $user->updateLastSeenAt();
+    $user->refresh();
+
+    expect($user->last_seen_at->diffInSeconds(now()))->toBeLessThan(2);
 });

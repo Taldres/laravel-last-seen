@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Taldres\LastSeen\Trait;
 
-use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
@@ -51,8 +50,7 @@ trait LastSeen
         return $this->last_seen_at && $this->last_seen_at->diffInSeconds(now()) < $threshold;
     }
 
-    #[Scope]
-    protected function onlyRecentlySeen(Builder $builder): void
+    public function scopeOnlyRecentlySeen(Builder $builder): void
     {
         $threshold = (int) config('last-seen.recently_seen_threshold', LastSeenDefaultThreshold::RecentlySeen->value);
 

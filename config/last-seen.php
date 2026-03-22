@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Models\User;
 use Taldres\LastSeen\Enums\LastSeenDefaultThreshold;
 
 return [
@@ -9,7 +10,7 @@ return [
         /*
          * The fully qualified class name of the User model that will be used to track the last seen timestamp.
          */
-        'user' => App\Models\User::class,
+        'user' => User::class,
     ],
 
     /*

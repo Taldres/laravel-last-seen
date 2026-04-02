@@ -119,8 +119,10 @@ it('checks if updateLastSeenAt updates when threshold is exceeded', function () 
         'last_seen_at' => now()->subSeconds($threshold + 1),
     ]);
 
+    $this->travelTo(now());
+
     $user->updateLastSeenAt();
     $user->refresh();
 
-    expect($user->last_seen_at->diffInSeconds(now()))->toBeLessThan(2);
+    expect($user->last_seen_at->timestamp)->toBe(now()->timestamp);
 });

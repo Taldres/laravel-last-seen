@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\MissingAttributeException;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use LogicException;
 use Taldres\LastSeen\Facades\LastSeen;
 use Taldres\LastSeen\Tests\TestModels\UnixTimestampUser;
 use Taldres\LastSeen\Tests\TestModels\User;
@@ -116,3 +117,11 @@ it('stores last_seen_at the way Eloquent saves it, also through date formats and
     'unix timestamp date format' => [UnixTimestampUser::class, 'UTC'],
     'cast that stores UTC in a non-UTC app' => [UtcStoredUser::class, 'Europe/Berlin'],
 ]);
+
+it('refuses to forget last_seen_at of a model loaded without its key', function () {
+    $user = User::forceCreate(['email' => $email = fake()->email(), 'last_seen_at' => now()]);
+    $keyless = User::query()->select(['email', 'last_seen_at'])->where('email', $email)->firstOrFail();
+
+    expect(fn () => LastSeen::forget($keyless))->toThrow(LogicException::class)
+        ->and($user->fresh()->last_seen_at)->not->toBeNull();
+});

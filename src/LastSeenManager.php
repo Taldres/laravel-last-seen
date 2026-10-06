@@ -8,6 +8,7 @@ use Carbon\CarbonInterface;
 use Closure;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Query\Builder as QueryBuilder;
+use LogicException;
 use Taldres\LastSeen\Enums\LastSeenDefaultThreshold;
 use Taldres\LastSeen\Trait\LastSeen;
 
@@ -75,7 +76,13 @@ class LastSeenManager
             return;
         }
 
-        $user->newModelQuery()->whereKey($this->originalKey($user))->toBase()->update(['last_seen_at' => null]);
+        $key = $this->originalKey($user);
+
+        if ($key === null) {
+            throw new LogicException('Cannot forget last_seen_at of a model that was loaded without its primary key.');
+        }
+
+        $user->newModelQuery()->whereKey($key)->toBase()->update(['last_seen_at' => null]);
 
         $user->forceFill(['last_seen_at' => null])->syncOriginalAttribute('last_seen_at');
     }

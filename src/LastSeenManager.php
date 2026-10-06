@@ -43,8 +43,8 @@ class LastSeenManager
         }
 
         $timestamp = $user->freshTimestamp();
-        $now = $user->fromDateTime($timestamp);
-        $outdated = $user->fromDateTime($timestamp->copy()->subSeconds($threshold));
+        $now = $this->storable($user, $timestamp);
+        $outdated = $this->storable($user, $timestamp->copy()->subSeconds($threshold));
 
         // Write only last_seen_at through the base query builder, so updated_at, model events
         // and other unsaved attributes stay untouched. The threshold is checked again in the
@@ -78,6 +78,11 @@ class LastSeenManager
         $user->newModelQuery()->whereKey($this->originalKey($user))->toBase()->update(['last_seen_at' => null]);
 
         $user->forceFill(['last_seen_at' => null])->syncOriginalAttribute('last_seen_at');
+    }
+
+    private function storable(Model $user, CarbonInterface $value): mixed
+    {
+        return $user->newInstance()->forceFill(['last_seen_at' => $value])->getAttributes()['last_seen_at'];
     }
 
     private function originalKey(Model $user): mixed

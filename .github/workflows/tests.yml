@@ -1,0 +1,124 @@
+name: tests
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  schedule:
+    # Weekly, to notice breaking changes in new dependency releases early.
+    - cron: '0 6 * * 1'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Code style and type coverage
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          coverage: none
+
+      - name: Install dependencies
+        run: composer update --prefer-dist --no-interaction --no-progress
+
+      - name: Check code style
+        run: composer lint:check
+
+      - name: Check type coverage
+        run: composer test:types
+
+  static-analysis:
+    name: Static analysis
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          coverage: none
+
+      - name: Install dependencies
+        run: composer update --prefer-dist --no-interaction --no-progress
+
+      - name: Run PHPStan
+        run: composer analyse -- --error-format=github
+
+  tests:
+    name: PHP ${{ matrix.php }} - Laravel ${{ matrix.laravel }} - ${{ matrix.stability }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    strategy:
+      fail-fast: true
+      matrix:
+        php: [8.3, 8.4, 8.5]
+        laravel: [12, 13]
+        stability: [prefer-stable]
+        include:
+          - laravel: 12
+            framework: ^12.0
+            testbench: ^10.0
+          - laravel: 13
+            framework: ^13.0
+            testbench: ^11.0
+          # Lowest dependencies on the lowest supported PHP version.
+          - php: 8.3
+            laravel: 12
+            stability: prefer-lowest
+            framework: ^12.0
+            testbench: ^10.0
+          - php: 8.3
+            laravel: 13
+            stability: prefer-lowest
+            framework: ^13.0
+            testbench: ^11.0
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: mbstring, pdo, sqlite, dom, fileinfo
+          coverage: none
+
+      - name: Allow insecure versions for the lowest dependencies
+        if: matrix.stability == 'prefer-lowest'
+        # The lowest supported Laravel releases have security advisories. They are only
+        # installed to verify compatibility and are never shipped.
+        run: composer config policy.advisories.block false
+
+      - name: Install dependencies
+        run: |
+          composer require "laravel/framework:${{ matrix.framework }}" "orchestra/testbench:${{ matrix.testbench }}" --no-interaction --no-update
+          composer update --${{ matrix.stability }} --prefer-dist --no-interaction --no-progress
+
+      - name: Run tests
+        run: composer test:unit -- --ci

@@ -44,6 +44,7 @@ it('qualifies last_seen_at so a joined table with the same column does not clash
 });
 
 it('compares in the storage format of the model, like recentlySeen()', function (string $model, string $timezone) {
+    createUnixTimestampUsersTable();
     date_default_timezone_set($timezone);
     $this->travelTo(Carbon::parse('2026-07-01 10:00:00', 'UTC'));
 

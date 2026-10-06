@@ -112,16 +112,18 @@ it('replaces a last_seen_at in the future', function () {
 });
 
 it('stores last_seen_at the way Eloquent saves it, also through date formats and casts', function (string $model, string $timezone) {
+    createUnixTimestampUsersTable();
     date_default_timezone_set($timezone);
     $this->travelTo(Carbon::parse('2026-07-01 10:00:00', 'UTC'));
 
     $recorded = $model::create(['email' => fake()->email()]);
     $saved = $model::create(['email' => fake()->email()])->forceFill(['last_seen_at' => now()]);
     $saved->save();
+    $table = $recorded->getTable();
 
     expect(LastSeen::record($recorded))->toBeTrue()
-        ->and(DB::table('users')->where('id', $recorded->id)->value('last_seen_at'))
-        ->toBe(DB::table('users')->where('id', $saved->id)->value('last_seen_at'))
+        ->and(DB::table($table)->where('id', $recorded->id)->value('last_seen_at'))
+        ->toBe(DB::table($table)->where('id', $saved->id)->value('last_seen_at'))
         ->and(LastSeen::record($recorded->fresh()))->toBeFalse();
 })->with([
     'unix timestamp date format' => [UnixTimestampUser::class, 'UTC'],

@@ -11,7 +11,7 @@ class UnixTimestampUser extends Model
 {
     use LastSeen;
 
-    protected $table = 'users';
+    protected $table = 'unix_timestamp_users';
 
     protected $fillable = ['email'];
 

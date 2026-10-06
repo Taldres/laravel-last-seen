@@ -62,6 +62,13 @@ beforeEach(function () {
         $table->timestamp('registered_at')->nullable();
         $table->timestamp('modified_at')->nullable();
     });
+
+    Schema::create('microsecond_users', function (Blueprint $table) {
+        $table->id();
+        $table->string('email');
+        $table->timestamp('last_seen_at', 6)->nullable();
+        $table->timestamps(6);
+    });
 });
 
 afterEach(function () {
@@ -145,14 +152,18 @@ it('records and forgets a soft-deleted user, while the scope skips trashed users
     expect(SoftDeletingUser::withTrashed()->findOrFail($user->id)->last_seen_at)->toBeNull();
 });
 
-it('stores last_seen_at in the date format of the model and checks the threshold in that format', function (string $model, string $stored) {
+it('stores last_seen_at in the date format of the model and checks the threshold in that format', function (string $model, string $lastSeenAt) {
     $this->travelTo(Carbon::parse('2026-10-06 12:00:00.250000'));
 
     $user = $model::forceCreate(['email' => fake()->email()]);
+    $saved = $model::forceCreate(['email' => fake()->email(), 'last_seen_at' => now()]);
     $stale = $model::query()->findOrFail($user->id);
+    $table = $user->getTable();
 
     expect(LastSeen::record($user))->toBeTrue()
-        ->and(DB::table('users')->where('id', $user->id)->value('last_seen_at'))->toBe($stored);
+        ->and(DB::table($table)->where('id', $user->id)->value('last_seen_at'))
+        ->toBe(DB::table($table)->where('id', $saved->id)->value('last_seen_at'))
+        ->and($user->fresh()->last_seen_at->format('Y-m-d H:i:s.u'))->toBe($lastSeenAt);
 
     $this->travel(5)->seconds();
     expect(LastSeen::record($stale))->toBeFalse();
@@ -161,7 +172,7 @@ it('stores last_seen_at in the date format of the model and checks the threshold
     expect(LastSeen::record($stale))->toBeTrue();
 })->with([
     'microseconds' => [MicrosecondUser::class, '2026-10-06 12:00:00.250000'],
-    'ISO 8601' => [IsoFormatUser::class, '2026-10-06T12:00:00+00:00'],
+    'ISO 8601' => [IsoFormatUser::class, '2026-10-06 12:00:00.000000'],
 ]);
 
 it('agrees with recentlySeen() in the scope for the date format of the model', function (string $model) {

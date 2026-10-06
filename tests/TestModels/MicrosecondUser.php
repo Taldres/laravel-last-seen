@@ -11,7 +11,7 @@ class MicrosecondUser extends Model
 {
     use LastSeen;
 
-    protected $table = 'users';
+    protected $table = 'microsecond_users';
 
     protected $dateFormat = 'Y-m-d H:i:s.u';
 }

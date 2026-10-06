@@ -8,7 +8,7 @@ breaking changes only happen in major releases.
 ### Requirements
 
 - Laravel 12 or 13 is required. Laravel 11 is no longer supported; stay on `0.4.x` if you cannot upgrade.
-- PHP 8.2 or higher is required, PHP 8.3 or higher for Laravel 13. This is unchanged from 0.4.
+- PHP 8.3 or higher is required. PHP 8.2 is no longer supported; stay on `0.4.x` if you cannot upgrade.
 
 Update the constraint in your `composer.json`:
 

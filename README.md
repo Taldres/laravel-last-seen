@@ -17,16 +17,16 @@ A simple Laravel package to track a user's last seen and recently seen status. T
 ## Requirements
 
 ### PHP
-PHP 8.2 or higher (8.3 or higher for Laravel 13)
+PHP 8.3 or higher
 
 ### Supported Laravel Versions
 
 | Laravel Version | Package Version | PHP Version |
 |:----------------|:----------------|:------------|
-| `^12.0`         | `^1.0`          | `^8.2`      |
+| `^12.0`         | `^1.0`          | `^8.3`      |
 | `^13.0`         | `^1.0`          | `^8.3`      |
 
-Laravel 11 is supported up to package version `0.4.x`.
+Laravel 11 and PHP 8.2 are supported up to package version `0.4.x`.
 
 ## Installation
 

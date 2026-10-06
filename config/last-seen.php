@@ -28,7 +28,7 @@ return [
 
     /*
      * The number of seconds a user is considered recently seen after their last activity.
-     * If the difference between now and last_seen_at is less than this value, the user is considered recently active.
+     * A user counts as recently seen while last_seen_at is at most this many seconds ago.
      * Default is 300 seconds (5 minutes).
      */
     'recently_seen_threshold' => (int) env('LAST_SEEN_RECENTLY_SEEN_THRESHOLD', LastSeenDefaultThreshold::RecentlySeen->value),

@@ -24,7 +24,7 @@ class LastSeenManager
      */
     public function record(Model $user): bool
     {
-        if (! $user->exists || ! $this->shouldTrack($user)) {
+        if (! $user->exists || ! config('last-seen.enabled', true)) {
             return false;
         }
 
@@ -35,6 +35,10 @@ class LastSeenManager
             : null;
 
         if ($lastSeenAt instanceof CarbonInterface && $lastSeenAt->diffInSeconds(now()) < $threshold) {
+            return false;
+        }
+
+        if (! $this->shouldTrack($user)) {
             return false;
         }
 

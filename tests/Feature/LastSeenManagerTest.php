@@ -63,3 +63,20 @@ it('records once the update threshold has passed, for loaded and partially selec
     'exactly at the threshold' => [60, true],
     'one second after the threshold' => [61, true],
 ]);
+
+it('calls the trackUsing callback only when a write is due', function () {
+    $calls = 0;
+    LastSeen::trackUsing(function () use (&$calls) {
+        $calls++;
+
+        return true;
+    });
+
+    $user = User::create(['email' => fake()->email()]);
+
+    LastSeen::record($user);
+    LastSeen::record($user);
+    LastSeen::record($user);
+
+    expect($calls)->toBe(1);
+});

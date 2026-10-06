@@ -8,7 +8,8 @@ description: Track and query when users were last active with taldres/laravel-la
 ## When to use this skill
 
 Use this skill when an application needs to know when users were last active, show who is online, or let users hide
-their activity, and `taldres/laravel-last-seen` is installed.
+their activity, and `taldres/laravel-last-seen` is installed. To upgrade from 0.x, use the `upgrade-laravel-last-seen-v1`
+skill instead.
 
 ## Setup
 

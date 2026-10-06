@@ -210,7 +210,7 @@ it('never touches the timestamp columns of the model', function (string $model, 
 
 it('stores the wall time of a non-UTC app timezone, also with an immutable_datetime cast', function () {
     date_default_timezone_set('Europe/Berlin');
-    $this->travelTo(Carbon::parse('2026-07-01 10:00:00', 'UTC'));
+    $this->travelTo(Carbon::parse('2026-07-01 12:00:00', 'Europe/Berlin'));
 
     $user = CastsMethodUser::forceCreate(['email' => fake()->email()]);
 

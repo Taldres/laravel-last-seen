@@ -11,7 +11,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        $tableName = $this->getTableName();
+        $tableName = $this->userModel()->getTable();
 
         // down() drops the column, so never take over a column the application already owns.
         if (Schema::hasColumn($tableName, 'last_seen_at')) {
@@ -25,7 +25,7 @@ return new class extends Migration
 
     public function down(): void
     {
-        $tableName = $this->getTableName();
+        $tableName = $this->userModel()->getTable();
 
         Schema::table($tableName, static function (Blueprint $table) use ($tableName) {
             if (Schema::hasColumn($tableName, 'last_seen_at')) {
@@ -38,20 +38,14 @@ return new class extends Migration
         });
     }
 
-    private function getTableName(): string
+    private function userModel(): Model
     {
-        $modelClassName = config('last-seen.models.user', null);
+        $modelClassName = config('last-seen.models.user');
 
-        if (empty($modelClassName) || ! class_exists($modelClassName)) {
+        if (! is_string($modelClassName) || ! is_subclass_of($modelClassName, Model::class) || (new \ReflectionClass($modelClassName))->isAbstract()) {
             throw new \InvalidArgumentException('The user model must be set in the last-seen configuration file. Run [php artisan config:clear] and try again.');
         }
 
-        $userModel = new $modelClassName;
-
-        if (! $userModel instanceof Model) {
-            throw new \InvalidArgumentException('The user model must be set in the last-seen configuration file.');
-        }
-
-        return $userModel->getTable();
+        return new $modelClassName;
     }
 };

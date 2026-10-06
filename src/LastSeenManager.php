@@ -34,7 +34,7 @@ class LastSeenManager
             ? $user->getAttribute('last_seen_at')
             : null;
 
-        if ($lastSeenAt instanceof CarbonInterface && $lastSeenAt->diffInSeconds(now()) <= $threshold) {
+        if ($lastSeenAt instanceof CarbonInterface && $lastSeenAt->diffInSeconds(now()) < $threshold) {
             return false;
         }
 

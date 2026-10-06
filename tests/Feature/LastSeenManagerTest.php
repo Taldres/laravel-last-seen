@@ -6,6 +6,7 @@ namespace Taldres\LastSeen\Tests\Feature;
 
 use Illuminate\Database\Eloquent\MissingAttributeException;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Taldres\LastSeen\Facades\LastSeen;
 use Taldres\LastSeen\Tests\TestModels\User;
@@ -46,3 +47,19 @@ it('records a model loaded without last_seen_at in strict mode', function () {
         Model::preventAccessingMissingAttributes(false);
     }
 });
+
+it('records once the update threshold has passed, for loaded and partially selected models alike', function (int $elapsed, bool $written) {
+    $this->travelTo(Carbon::parse('2026-10-06 12:00:00')->addSeconds($elapsed));
+
+    $loaded = User::forceCreate(['email' => fake()->email(), 'last_seen_at' => '2026-10-06 12:00:00'])->fresh();
+    $partial = User::query()->select(['id', 'email'])->findOrFail(
+        User::forceCreate(['email' => fake()->email(), 'last_seen_at' => '2026-10-06 12:00:00'])->id,
+    );
+
+    expect(LastSeen::record($loaded))->toBe($written)
+        ->and(LastSeen::record($partial))->toBe($written);
+})->with([
+    'one second before the threshold' => [59, false],
+    'exactly at the threshold' => [60, true],
+    'one second after the threshold' => [61, true],
+]);

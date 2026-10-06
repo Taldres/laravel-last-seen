@@ -16,16 +16,30 @@ jobs:
       matrix:
         php: [8.2, 8.3, 8.4, 8.5]
         laravel: [12, 13]
+        stability: [prefer-stable]
         exclude:
           - php: 8.2
             laravel: 13
         include:
           - laravel: 12
+            framework: ^12.0
             testbench: ^10.0
           - laravel: 13
+            framework: ^13.0
+            testbench: ^11.0
+          # Lowest dependencies, each on the lowest PHP version of its Laravel major.
+          - php: 8.2
+            laravel: 12
+            stability: prefer-lowest
+            framework: ^12.0
+            testbench: ^10.0
+          - php: 8.3
+            laravel: 13
+            stability: prefer-lowest
+            framework: ^13.0
             testbench: ^11.0
 
-    name: PHP ${{ matrix.php }} - Laravel ${{ matrix.laravel }}
+    name: PHP ${{ matrix.php }} - Laravel ${{ matrix.laravel }} - ${{ matrix.stability }}
 
     steps:
       - uses: actions/checkout@v7
@@ -35,9 +49,14 @@ jobs:
           php-version: ${{ matrix.php }}
           extensions: mbstring, pdo, sqlite, dom, fileinfo
           coverage: none
+      - name: Allow insecure versions for the lowest dependencies
+        if: matrix.stability == 'prefer-lowest'
+        # The lowest supported Laravel releases have security advisories. They are only
+        # installed to verify compatibility and are never shipped.
+        run: composer config policy.advisories.block false
       - name: Install Composer dependencies
         run: |
-          composer require "laravel/framework:^${{ matrix.laravel }}.0" "orchestra/testbench:${{ matrix.testbench }}" --no-interaction --no-update
-          composer update --prefer-dist --no-interaction --no-progress
+          composer require "laravel/framework:${{ matrix.framework }}" "orchestra/testbench:${{ matrix.testbench }}" --no-interaction --no-update
+          composer update --${{ matrix.stability }} --prefer-dist --no-interaction --no-progress
       - name: Run Pest tests
         run: vendor/bin/pest --ci

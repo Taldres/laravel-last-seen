@@ -25,7 +25,7 @@ trait LastSeen
 
     /**
      * Writes last_seen_at if tracking is allowed and the update threshold has passed.
-     * Returns whether the timestamp was written.
+     * Returns whether the stored timestamp changed.
      */
     public function updateLastSeenAt(): bool
     {

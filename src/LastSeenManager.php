@@ -21,7 +21,7 @@ class LastSeenManager
 
     /**
      * Writes last_seen_at if tracking is allowed and the update threshold has passed.
-     * Returns whether the timestamp was written.
+     * Returns whether the stored timestamp changed.
      */
     public function record(Model $user): bool
     {
@@ -49,13 +49,14 @@ class LastSeenManager
 
         // Write only last_seen_at through the base query builder, so updated_at, model events
         // and other unsaved attributes stay untouched. The threshold is checked again in the
-        // query, so parallel requests write only once.
+        // query, so parallel requests write only once. With a threshold of 0, a row that
+        // already holds the current timestamp is left alone.
         $written = $user->newModelQuery()
             ->whereKey($this->originalKey($user))
             ->toBase()
             ->where(fn (QueryBuilder $query) => $query
                 ->whereNull('last_seen_at')
-                ->orWhere('last_seen_at', '<=', $outdated)
+                ->orWhere('last_seen_at', $threshold > 0 ? '<=' : '<', $outdated)
                 ->orWhere('last_seen_at', '>', $now))
             ->update(['last_seen_at' => $now]) > 0;
 

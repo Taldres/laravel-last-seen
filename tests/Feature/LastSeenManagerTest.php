@@ -161,13 +161,15 @@ it('keeps the recorded last_seen_at in memory exactly as it was stored', functio
         ->and($user->isDirty())->toBeFalse();
 });
 
-it('records on every call with an update threshold of 0', function () {
+it('records whenever the stored timestamp changes with an update threshold of 0', function () {
     config(['last-seen.update_threshold' => 0]);
     $this->travelTo(Carbon::parse('2026-10-06 12:00:00'));
 
     $user = User::create(['email' => fake()->email()]);
 
-    expect(LastSeen::record($user))->toBeTrue();
+    expect(LastSeen::record($user))->toBeTrue()
+        ->and(LastSeen::record($user))->toBeFalse()
+        ->and(LastSeen::record($user->fresh()))->toBeFalse();
 
     $this->travelTo(Carbon::parse('2026-10-06 12:00:01'));
 

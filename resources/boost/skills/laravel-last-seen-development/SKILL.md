@@ -61,7 +61,7 @@ The middleware records activity automatically. Record it manually only outside H
 ```php
 use Taldres\LastSeen\Facades\LastSeen;
 
-LastSeen::record($user);    // same as $user->updateLastSeenAt(), returns whether it wrote
+LastSeen::record($user);    // same as $user->updateLastSeenAt(), returns whether the stored timestamp changed
 LastSeen::forget($user);    // same as $user->forgetLastSeenAt(), sets last_seen_at to null
 ```
 

@@ -201,6 +201,21 @@ it('agrees with recentlySeen() at the boundary when microseconds are stored', fu
         ->and(MicrosecondUser::onlyRecentlySeen()->pluck('id')->all())->toBe([$atBoundary->id]);
 });
 
+it('records every new microsecond with an update threshold of 0 when microseconds are stored', function () {
+    config(['last-seen.update_threshold' => 0]);
+    $this->travelTo(Carbon::parse('2026-10-06 12:00:00.250000'));
+
+    $user = MicrosecondUser::forceCreate(['email' => fake()->email()]);
+
+    expect(LastSeen::record($user))->toBeTrue()
+        ->and(LastSeen::record($user))->toBeFalse();
+
+    $this->travelTo(Carbon::parse('2026-10-06 12:00:00.250001'));
+
+    expect(LastSeen::record($user))->toBeTrue()
+        ->and($user->fresh()->last_seen_at->format('Y-m-d H:i:s.u'))->toBe('2026-10-06 12:00:00.250001');
+});
+
 it('never touches the timestamp columns of the model', function (string $model, string $table, array $columns) {
     $user = $model::forceCreate(['email' => fake()->email()]);
     $timestamps = (array) DB::table($table)->where('id', $user->id)->first($columns);

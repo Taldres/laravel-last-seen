@@ -19,7 +19,7 @@ return new class extends Migration
         }
 
         Schema::table($tableName, static function (Blueprint $table) {
-            $table->timestamp('last_seen_at')->nullable();
+            $table->timestamp('last_seen_at')->nullable()->index();
         });
     }
 
@@ -29,6 +29,10 @@ return new class extends Migration
 
         Schema::table($tableName, static function (Blueprint $table) use ($tableName) {
             if (Schema::hasColumn($tableName, 'last_seen_at')) {
+                if (Schema::hasIndex($tableName, ['last_seen_at'])) {
+                    $table->dropIndex(['last_seen_at']);
+                }
+
                 $table->dropColumn('last_seen_at');
             }
         });

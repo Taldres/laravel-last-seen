@@ -19,7 +19,11 @@ it('adds and drops the last_seen_at column on the configured user table', functi
     expect(Schema::hasColumn('users', 'last_seen_at'))->toBeFalse();
 
     $this->migration->up();
-    expect(Schema::hasColumn('users', 'last_seen_at'))->toBeTrue();
+    expect(Schema::hasColumn('users', 'last_seen_at'))->toBeTrue()
+        ->and(Schema::hasIndex('users', ['last_seen_at']))->toBeTrue();
+
+    $this->migration->down();
+    expect(Schema::hasColumn('users', 'last_seen_at'))->toBeFalse();
 });
 
 it('refuses to take over an existing last_seen_at column', function () {

@@ -23,7 +23,6 @@ class UpdateLastSeenMiddleware
         $user = Auth::user();
 
         if (! $user
-            || ! $user->hasAttribute('last_seen_at')
             || ! method_exists($user, 'updateLastSeenAt')
             || ! config('last-seen.enabled', true)
         ) {

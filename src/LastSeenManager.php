@@ -50,6 +50,21 @@ class LastSeenManager
         return $written;
     }
 
+    /**
+     * Sets last_seen_at to null, without touching updated_at or other unsaved attributes.
+     * It works even when the package is disabled.
+     */
+    public function forget(Model $user): void
+    {
+        if (! $user->exists) {
+            return;
+        }
+
+        $user->newModelQuery()->whereKey($user->getKey())->toBase()->update(['last_seen_at' => null]);
+
+        $user->forceFill(['last_seen_at' => null])->syncOriginalAttribute('last_seen_at');
+    }
+
     public function recentlySeen(Model $user): bool
     {
         $lastSeenAt = $user->getAttribute('last_seen_at');

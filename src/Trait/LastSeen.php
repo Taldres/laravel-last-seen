@@ -32,6 +32,14 @@ trait LastSeen
         return app(LastSeenManager::class)->record($this);
     }
 
+    /**
+     * Sets last_seen_at to null, without touching updated_at or other unsaved attributes.
+     */
+    public function forgetLastSeenAt(): void
+    {
+        app(LastSeenManager::class)->forget($this);
+    }
+
     public function recentlySeen(): bool
     {
         return app(LastSeenManager::class)->recentlySeen($this);

@@ -176,3 +176,30 @@ it('checks if a last_seen_at in the future counts as recently seen in helper and
     expect($user->fresh()->recentlySeen())->toBeTrue()
         ->and(User::onlyRecentlySeen()->pluck('id')->all())->toBe([$user->id]);
 });
+
+it('checks if forgetLastSeenAt clears last_seen_at without touching anything else', function () {
+    $user = TimestampedUser::forceCreate(['email' => $email = fake()->email(), 'last_seen_at' => now()]);
+    $updatedAt = $user->updated_at;
+    $user->email = fake()->email();
+
+    $this->travel(5)->seconds();
+    $user->forgetLastSeenAt();
+
+    $fresh = $user->fresh();
+
+    expect($user->last_seen_at)->toBeNull()
+        ->and($user->isDirty('last_seen_at'))->toBeFalse()
+        ->and($fresh->last_seen_at)->toBeNull()
+        ->and($fresh->email)->toBe($email)
+        ->and($fresh->updated_at->timestamp)->toBe($updatedAt->timestamp);
+});
+
+it('checks if forgetLastSeenAt also works when the feature is disabled', function () {
+    config(['last-seen.enabled' => false]);
+
+    $user = User::forceCreate(['email' => fake()->email(), 'last_seen_at' => now()]);
+
+    $user->forgetLastSeenAt();
+
+    expect($user->fresh()->last_seen_at)->toBeNull();
+});

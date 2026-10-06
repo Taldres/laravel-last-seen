@@ -123,6 +123,8 @@ A `last_seen_at` in the future, e.g. caused by clock drift between servers, coun
 - `$user->updateLastSeenAt()`: Writes `last_seen_at` if the user is tracked and the configured update threshold has
   passed, and returns whether it wrote. Only `last_seen_at` is written: no model events are fired, the model's
   `updated_at` timestamp is left untouched and other unsaved changes on the model are not persisted.
+- `$user->forgetLastSeenAt()`: Sets `last_seen_at` to `null`, again without touching `updated_at` or other unsaved
+  changes. It works even when the package is disabled.
 
 `last_seen_at` is not added to your model's `$fillable`. If you need to mass-assign it, add it there yourself or use `forceFill()`.
 
@@ -134,6 +136,7 @@ The `LastSeen` facade offers the same operations for code outside the model, suc
 use Taldres\LastSeen\Facades\LastSeen;
 
 LastSeen::record($user);         // same as $user->updateLastSeenAt()
+LastSeen::forget($user);         // same as $user->forgetLastSeenAt()
 LastSeen::recentlySeen($user);   // same as $user->recentlySeen()
 LastSeen::recentlySeenSince();   // earliest last_seen_at that still counts as recently seen
 LastSeen::shouldTrack($user);    // whether last_seen_at may be written for this user

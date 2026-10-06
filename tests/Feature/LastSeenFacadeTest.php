@@ -36,3 +36,13 @@ it('does not track models without the LastSeen trait', function () {
 
     expect(LastSeen::shouldTrack($model))->toBeFalse();
 });
+
+it('forgets the stored timestamp', function () {
+    $user = TimestampedUser::forceCreate(['email' => fake()->email(), 'last_seen_at' => now()]);
+
+    LastSeen::forget($user);
+
+    expect($user->last_seen_at)->toBeNull()
+        ->and($user->fresh()->last_seen_at)->toBeNull()
+        ->and(LastSeen::recentlySeen($user))->toBeFalse();
+});

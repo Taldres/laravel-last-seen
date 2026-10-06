@@ -140,6 +140,7 @@ LastSeen::forget($user);         // same as $user->forgetLastSeenAt()
 LastSeen::recentlySeen($user);   // same as $user->recentlySeen()
 LastSeen::recentlySeenSince();   // earliest last_seen_at that still counts as recently seen
 LastSeen::shouldTrack($user);    // whether last_seen_at may be written for this user
+LastSeen::trackUsing($callback); // decide per user whether to track, see Privacy
 ```
 
 The facade resolves `Taldres\LastSeen\LastSeenManager` from the container, so you can also inject the manager

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Taldres\LastSeen;
 
 use Carbon\CarbonInterface;
+use Closure;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Query\Builder as QueryBuilder;
 use Taldres\LastSeen\Enums\LastSeenDefaultThreshold;
@@ -12,6 +13,11 @@ use Taldres\LastSeen\Trait\LastSeen;
 
 class LastSeenManager
 {
+    /**
+     * @var (Closure(Model): bool)|null
+     */
+    private ?Closure $trackUsing = null;
+
     /**
      * Writes last_seen_at if tracking is allowed and the update threshold has passed.
      * Returns whether the timestamp was written.
@@ -84,12 +90,23 @@ class LastSeenManager
     }
 
     /**
-     * Determines whether last_seen_at may be written for the user: the package is enabled and
-     * the model uses the LastSeen trait.
+     * Determines whether last_seen_at may be written for the user: the package is enabled, the
+     * model uses the LastSeen trait and the callback registered with trackUsing() allows it.
      */
     public function shouldTrack(Model $user): bool
     {
         return config('last-seen.enabled', true)
-            && in_array(LastSeen::class, class_uses_recursive($user), true);
+            && in_array(LastSeen::class, class_uses_recursive($user), true)
+            && ($this->trackUsing === null || ($this->trackUsing)($user));
+    }
+
+    /**
+     * Registers a callback that decides per user whether last_seen_at may be written.
+     *
+     * @param  (Closure(Model): bool)|null  $callback
+     */
+    public function trackUsing(?Closure $callback): void
+    {
+        $this->trackUsing = $callback;
     }
 }

@@ -7,6 +7,7 @@ namespace Taldres\LastSeen\Tests\Feature;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
+use Taldres\LastSeen\Facades\LastSeen;
 use Taldres\LastSeen\Tests\TestModels\TimestampedUser;
 use Taldres\LastSeen\Tests\TestModels\User;
 
@@ -175,6 +176,16 @@ it('checks if a last_seen_at in the future counts as recently seen in helper and
 
     expect($user->fresh()->recentlySeen())->toBeTrue()
         ->and(User::onlyRecentlySeen()->pluck('id')->all())->toBe([$user->id]);
+});
+
+it('checks if updateLastSeenAt does not write for users that should not be tracked', function () {
+    LastSeen::trackUsing(fn () => false);
+
+    $user = TimestampedUser::create(['email' => fake()->email()]);
+
+    expect($user->updateLastSeenAt())->toBeFalse()
+        ->and($user->last_seen_at)->toBeNull()
+        ->and($user->fresh()->last_seen_at)->toBeNull();
 });
 
 it('checks if forgetLastSeenAt clears last_seen_at without touching anything else', function () {

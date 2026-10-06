@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Route;
 use Taldres\LastSeen\Events\UserWasActiveEvent;
+use Taldres\LastSeen\Facades\LastSeen;
 use Taldres\LastSeen\Middleware\UpdateLastSeenMiddleware;
 use Taldres\LastSeen\Tests\TestModels\TimestampedUser;
 
@@ -62,4 +63,13 @@ it('updates last_seen_at when the authentication middleware runs after it', func
     $this->get('/last-seen-token', ['X-User-Id' => (string) $user->id])->assertOk();
 
     expect($user->fresh()->last_seen_at)->not->toBeNull();
+});
+
+it('does not dispatch the event for users that should not be tracked', function () {
+    Event::fake([UserWasActiveEvent::class]);
+    LastSeen::trackUsing(fn () => false);
+
+    $this->actingAs(TimestampedUser::create(['email' => fake()->email()]))->get('/last-seen')->assertOk();
+
+    Event::assertNotDispatched(UserWasActiveEvent::class);
 });

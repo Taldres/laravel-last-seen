@@ -22,6 +22,18 @@ it('records activity only once within the update threshold', function () {
         ->and($user->fresh()->last_seen_at)->not->toBeNull();
 });
 
+it('passes the user to the trackUsing callback', function () {
+    $tracked = TimestampedUser::create(['email' => fake()->email()]);
+    $untracked = TimestampedUser::create(['email' => fake()->email()]);
+
+    LastSeen::trackUsing(fn (Model $user): bool => $user->is($tracked));
+
+    expect(LastSeen::shouldTrack($tracked))->toBeTrue()
+        ->and(LastSeen::shouldTrack($untracked))->toBeFalse()
+        ->and(LastSeen::record($untracked))->toBeFalse()
+        ->and($untracked->fresh()->last_seen_at)->toBeNull();
+});
+
 it('does not track when the feature is disabled', function () {
     config(['last-seen.enabled' => false]);
 

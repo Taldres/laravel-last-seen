@@ -13,6 +13,7 @@ use Taldres\LastSeen\LastSeenManager;
  * @method static bool recentlySeen(\Illuminate\Database\Eloquent\Model $user)
  * @method static \Carbon\CarbonInterface recentlySeenSince()
  * @method static bool shouldTrack(\Illuminate\Database\Eloquent\Model $user)
+ * @method static void trackUsing((\Closure(\Illuminate\Database\Eloquent\Model): bool)|null $callback)
  *
  * @see LastSeenManager
  */

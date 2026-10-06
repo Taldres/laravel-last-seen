@@ -2,6 +2,17 @@
 
 All notable changes to `laravel-last-seen` will be documented in this file
 
+## v1.1.0 - 2026-10-06
+
+<!-- Release notes generated using configuration in .github/release.yml at main -->
+### What's Changed
+
+#### Enhancements
+
+* feat(boost): ship a skill for the upgrade from 0.x to 1.0 by @Taldres in https://github.com/Taldres/laravel-last-seen/pull/15
+
+**Full Changelog**: https://github.com/Taldres/laravel-last-seen/compare/v1.0.0...v1.1.0
+
 ## v1.0.0 - 2026-10-06
 
 <!-- Release notes generated using configuration in .github/release.yml at main -->

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Taldres\LastSeen\Trait;
 
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Query\Builder as QueryBuilder;
@@ -55,16 +56,23 @@ trait LastSeen
 
     public function recentlySeen(): bool
     {
-        $threshold = (int) config('last-seen.recently_seen_threshold', LastSeenDefaultThreshold::RecentlySeen->value);
-
-        return $this->last_seen_at && $this->last_seen_at->diffInSeconds(now()) < $threshold;
+        return $this->last_seen_at !== null && $this->last_seen_at->gte($this->recentlySeenSince());
     }
 
     public function scopeOnlyRecentlySeen(Builder $builder): void
     {
+        $builder->whereNotNull('last_seen_at')
+            ->where('last_seen_at', '>=', $this->recentlySeenSince());
+    }
+
+    /**
+     * The earliest last_seen_at that still counts as recently seen, shared by recentlySeen()
+     * and scopeOnlyRecentlySeen(). It is cut to whole seconds like the stored timestamp.
+     */
+    private function recentlySeenSince(): CarbonInterface
+    {
         $threshold = (int) config('last-seen.recently_seen_threshold', LastSeenDefaultThreshold::RecentlySeen->value);
 
-        $builder->whereNotNull('last_seen_at')
-            ->where('last_seen_at', '>=', now()->subSeconds($threshold));
+        return now()->subSeconds($threshold)->startOfSecond();
     }
 }

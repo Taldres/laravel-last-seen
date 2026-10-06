@@ -157,3 +157,22 @@ it('checks if updateLastSeenAt does not write again when another instance alread
 
     expect($user->fresh()->last_seen_at->timestamp)->toBe($first->last_seen_at->timestamp);
 });
+
+it('checks if recentlySeen and onlyRecentlySeen agree at the threshold boundary', function () {
+    $this->freezeSecond();
+    $threshold = config()->integer('last-seen.recently_seen_threshold');
+
+    $atBoundary = User::forceCreate(['email' => fake()->email(), 'last_seen_at' => now()->subSeconds($threshold)]);
+    $pastBoundary = User::forceCreate(['email' => fake()->email(), 'last_seen_at' => now()->subSeconds($threshold + 1)]);
+
+    expect($atBoundary->fresh()->recentlySeen())->toBeTrue()
+        ->and($pastBoundary->fresh()->recentlySeen())->toBeFalse()
+        ->and(User::onlyRecentlySeen()->pluck('id')->all())->toBe([$atBoundary->id]);
+});
+
+it('checks if a last_seen_at in the future counts as recently seen in helper and scope', function () {
+    $user = User::forceCreate(['email' => fake()->email(), 'last_seen_at' => now()->addMinute()]);
+
+    expect($user->fresh()->recentlySeen())->toBeTrue()
+        ->and(User::onlyRecentlySeen()->pluck('id')->all())->toBe([$user->id]);
+});

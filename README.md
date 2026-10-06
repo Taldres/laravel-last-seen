@@ -107,8 +107,10 @@ Each setting has a default value, so you only need to override them if you want 
 
 ### Checking Activity
 
-- `$user->recentlySeen()`: Returns `true` if the user was active within the configured threshold.
-- `User::onlyRecentlySeen()`: Query scope to get only users recently seen.
+- `$user->recentlySeen()`: Returns `true` if `last_seen_at` is at most `LAST_SEEN_RECENTLY_SEEN_THRESHOLD` seconds ago.
+- `User::onlyRecentlySeen()`: Query scope to get only recently seen users, using the same rule as `recentlySeen()`.
+
+A `last_seen_at` in the future, e.g. caused by clock drift between servers, counts as recently seen.
 
 ### Updating Activity
 

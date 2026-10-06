@@ -59,6 +59,9 @@ trait LastSeen
         return $this->last_seen_at !== null && $this->last_seen_at->gte($this->recentlySeenSince());
     }
 
+    /**
+     * @param  Builder<static>  $builder
+     */
     public function scopeOnlyRecentlySeen(Builder $builder): void
     {
         $builder->whereNotNull('last_seen_at')

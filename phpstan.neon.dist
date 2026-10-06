@@ -7,13 +7,12 @@ parameters:
         - src
         - config
         - database
+        # Analyses the LastSeen trait in the context of a model that uses it.
+        - tests/TestModels
     level: 9
     ignoreErrors:
         - '#^Class App\\Models\\User not found.#'
         -
             message: "#^Called 'env' outside of the config directory which returns null when the config is cached, use 'config'.$#"
             path: *config/*.php
-        #- '#^Access to an undefined property Illuminate\\Foundation\\Auth\\User::\$last_seen_at.#'
-        -
-            identifier: trait.unused
 

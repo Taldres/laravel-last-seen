@@ -105,9 +105,9 @@ php artisan vendor:publish --provider="Taldres\LastSeen\LastSeenServiceProvider"
 
 ---
 
-In the `config/last-seen.php` file, you can specify the User model to be used for tracking last seen timestamps:
+In the `config/last-seen.php` file, you can specify the User model:
 
-- `user`: The fully qualified class name of the User model to be used for tracking last seen timestamps.
+- `models.user`: The fully qualified class name of the User model. The migration uses it to find the users table.
 
 All other settings—such as enabling/disabling the feature, update thresholds, and recently seen thresholds—can be controlled via environment variables in your `.env` file:
 

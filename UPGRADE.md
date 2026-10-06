@@ -48,6 +48,9 @@ through a route-level `auth:sanctum` middleware.
 As a consequence, `last_seen_at` is no longer updated before your controller runs. If a controller relied on seeing
 the fresh timestamp within the same request, call `$user->updateLastSeenAt()` there yourself.
 
+Exceptions while recording activity, for example from your own `UserWasActiveEvent` listeners, are now reported
+instead of replacing the response with an error page.
+
 Authenticated users that are not Eloquent models, for example a `GenericUser` from the `database` user provider, are
 now ignored instead of causing an error.
 

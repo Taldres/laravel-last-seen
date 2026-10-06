@@ -132,6 +132,13 @@ Each setting has a default value, so you only need to override them if you want 
   detected", not "timestamp written": `last_seen_at` is only written once `LAST_SEEN_UPDATE_THRESHOLD` seconds have
   passed since the stored value, so it can lag behind the latest activity by up to that many seconds. Parallel requests
   write it only once.
+- The middleware records the user that is authenticated once the request has been handled: the user of the default
+  guard, or of the guard an `auth:<guard>` middleware selected. Logout requests are therefore not recorded, and when a
+  request switches users, for example while an admin impersonates someone, only the final user is.
+- Error responses count as activity too. Registering the middleware twice, for example globally and on a route, still
+  records each request once.
+- If recording fails, for example because of a database error or an exception in one of your listeners, the exception
+  is reported and the response is returned unchanged.
 
 ### Checking Activity
 

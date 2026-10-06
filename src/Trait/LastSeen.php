@@ -50,7 +50,9 @@ trait LastSeen
      */
     public function scopeOnlyRecentlySeen(Builder $builder): void
     {
-        $builder->whereNotNull('last_seen_at')
-            ->where('last_seen_at', '>=', app(LastSeenManager::class)->recentlySeenSince());
+        $column = $builder->qualifyColumn('last_seen_at');
+
+        $builder->whereNotNull($column)
+            ->where($column, '>=', app(LastSeenManager::class)->recentlySeenSince());
     }
 }

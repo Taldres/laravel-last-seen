@@ -2,6 +2,30 @@
 
 All notable changes to `laravel-last-seen` will be documented in this file
 
+## v1.0.0 - 2026-10-06
+
+<!-- Release notes generated using configuration in .github/release.yml at main -->
+### What's Changed
+
+#### Breaking Changes
+
+* feat!: prepare the 1.0.0 release by @Taldres in https://github.com/Taldres/laravel-last-seen/pull/10
+* build!: require PHP 8.3 by @Taldres in https://github.com/Taldres/laravel-last-seen/pull/11
+
+#### Enhancements
+
+* feat: adopt the package skeleton tooling and ship a Boost skill by @Taldres in https://github.com/Taldres/laravel-last-seen/pull/12
+
+#### Bug Fixes
+
+* fix: harden edge cases before 1.0 by @Taldres in https://github.com/Taldres/laravel-last-seen/pull/14
+
+#### Other Changes
+
+* docs: readme banner by @Taldres in https://github.com/Taldres/laravel-last-seen/pull/13
+
+**Full Changelog**: https://github.com/Taldres/laravel-last-seen/compare/v0.4.0...v1.0.0
+
 ## v0.4.0 - 2026-04-02
 
 ### What's Changed

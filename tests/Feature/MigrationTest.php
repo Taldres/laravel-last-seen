@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace Taldres\LastSeen\Tests\Feature;
 
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 use InvalidArgumentException;
 use RuntimeException;
 use stdClass;
 use Taldres\LastSeen\Tests\TestModels\AbstractUser;
+use Taldres\LastSeen\Tests\TestModels\SecondaryConnectionUser;
 use Taldres\LastSeen\Tests\TestModels\User;
 
 beforeEach(function () {
@@ -46,3 +48,23 @@ it('rejects a user model configuration that is not a concrete Eloquent model', f
     'not a model' => [stdClass::class],
     'abstract model' => [AbstractUser::class],
 ]);
+
+it('runs on the connection of the user model', function () {
+    config([
+        'database.connections.secondary' => ['driver' => 'sqlite', 'database' => ':memory:', 'prefix' => ''],
+        'last-seen.models.user' => SecondaryConnectionUser::class,
+    ]);
+    Schema::connection('secondary')->create('users', function (Blueprint $table) {
+        $table->id();
+    });
+
+    $this->migration->up();
+
+    expect($this->migration->getConnection())->toBe('secondary')
+        ->and(Schema::connection('secondary')->hasColumn('users', 'last_seen_at'))->toBeTrue();
+
+    $this->migration->down();
+
+    expect(Schema::connection('secondary')->hasColumn('users', 'last_seen_at'))->toBeFalse()
+        ->and(Schema::hasColumn('users', 'last_seen_at'))->toBeTrue();
+});

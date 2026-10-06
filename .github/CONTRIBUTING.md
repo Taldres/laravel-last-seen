@@ -30,7 +30,9 @@ composer test:unit   # the Pest test suite
 
 - Add or update tests for every change in behavior.
 - Keep a pull request focused on one change.
-- Describe user-facing changes in the pull request description; they end up in the release notes.
+- Describe user-facing changes in the pull request description. The release notes are generated from pull request
+  titles, grouped by the label a maintainer assigns: `breaking`, `enhancement`, `bug`, `documentation`,
+  `dependencies` or `maintenance`. Pull requests labelled `skip-changelog` are left out.
 
 ## Security Vulnerabilities
 

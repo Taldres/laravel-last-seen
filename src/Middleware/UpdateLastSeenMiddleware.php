@@ -35,7 +35,7 @@ class UpdateLastSeenMiddleware
 
         $user = Auth::user();
 
-        if (! $user instanceof Model || ! $this->lastSeen->shouldTrack($user)) {
+        if (! $user instanceof Model || ! $user->exists || ! $this->lastSeen->shouldTrack($user)) {
             return $response;
         }
 

@@ -91,3 +91,18 @@ it('does not resolve the user when the package is disabled', function () {
 
     expect($calls)->toBe(0);
 });
+
+it('does not dispatch the event for users that do not exist in the database', function () {
+    Event::fake([UserWasActiveEvent::class]);
+
+    Route::delete('/account', function () {
+        Auth::user()?->delete();
+
+        return response()->noContent();
+    })->middleware(UpdateLastSeenMiddleware::class);
+
+    $this->actingAs(new TimestampedUser(['email' => fake()->email()]))->get('/last-seen')->assertOk();
+    $this->actingAs(TimestampedUser::create(['email' => fake()->email()]))->delete('/account')->assertNoContent();
+
+    Event::assertNotDispatched(UserWasActiveEvent::class);
+});

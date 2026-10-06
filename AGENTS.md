@@ -2,6 +2,12 @@
 
 Rules for AI coding agents working in this repository.
 
+## Checks
+
+- Run `composer lint` to fix the code style, then `composer test` before every commit. `composer test` runs
+  PHPStan, the code style check, type coverage and the Pest suite without changing files.
+- Every commit must pass `composer test` on its own.
+
 ## Branches
 
 Branch names follow the [Conventional Branch](https://conventional-branch.github.io/) format and use the

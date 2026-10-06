@@ -49,22 +49,26 @@
     }
   },
   "scripts": {
+    "lint": [
+      "vendor/bin/pint --parallel"
+    ],
+    "lint:check": [
+      "vendor/bin/pint --parallel --test"
+    ],
+    "analyse": [
+      "vendor/bin/phpstan analyse --memory-limit=2G"
+    ],
+    "test:types": [
+      "@php -d memory_limit=2G vendor/bin/pest --type-coverage --min=100"
+    ],
+    "test:unit": [
+      "vendor/bin/pest"
+    ],
     "test": [
-      "./vendor/bin/pint",
-      "./vendor/bin/pest",
-      "./vendor/bin/phpstan analyse --memory-limit=2G"
-    ],
-    "pint": [
-      "./vendor/bin/pint"
-    ],
-    "pest": [
-      "./vendor/bin/pest"
-    ],
-    "test-pint": [
-      "./vendor/bin/pint --test"
-    ],
-    "test-stan": [
-      "./vendor/bin/phpstan analyse --memory-limit=2G"
+      "@analyse",
+      "@lint:check",
+      "@test:types",
+      "@test:unit"
     ]
   }
 }

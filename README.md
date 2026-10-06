@@ -225,12 +225,14 @@ public function boot(): void
 ```
 
 For users the callback rejects, the middleware fires no `UserWasActiveEvent` and `updateLastSeenAt()` leaves
-`last_seen_at` untouched.
+`last_seen_at` untouched. The callback receives every model that uses the trait, so type-hint `Model` if more than one
+of your models does. Register it once while booting: it stays active for all later requests, also in Octane or queue
+workers.
 
 ### Deleting the Timestamp
 
 - `$user->forgetLastSeenAt()` sets `last_seen_at` to `null`. Combine it with an opt-out, otherwise the next request
-  writes it again.
+  writes it again. It throws a `LogicException` for a model that was loaded without its primary key.
 - When a user is deleted, `last_seen_at` is deleted with the row.
 - `LAST_SEEN_ENABLED=false` only stops new writes. It does not delete stored values.
 

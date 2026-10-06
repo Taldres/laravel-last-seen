@@ -75,6 +75,9 @@ Laravel 11 is supported up to package version `0.4.x`.
     // ...
     ```
 
+   The middleware resolves the authenticated user after the request has been handled, so it also works when
+   authentication happens later in the stack, e.g. through a route-level `auth:sanctum` middleware.
+
 ## Configuration
 
 If necessary or in case of a newer version, you can publish the configuration file to customize the package settings:

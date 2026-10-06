@@ -16,21 +16,26 @@ class UpdateLastSeenMiddleware
     /**
      * Handle an incoming request and update the user's last seen timestamp if applicable.
      *
+     * The user is resolved after the request has been handled, so authentication middleware
+     * that runs later in the stack (e.g. route-level `auth:sanctum`) has already taken effect.
+     *
      * @param  Closure(Request): (Response)  $next
      */
     public function handle(Request $request, Closure $next): Response
     {
+        $response = $next($request);
+
         $user = Auth::user();
 
         if (! $user
             || ! method_exists($user, 'updateLastSeenAt')
             || ! config('last-seen.enabled', true)
         ) {
-            return $next($request);
+            return $response;
         }
 
         Event::dispatch(new UserWasActiveEvent($user));
 
-        return $next($request);
+        return $response;
     }
 }

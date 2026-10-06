@@ -11,9 +11,7 @@
   ],
   "require": {
     "php": "^8.2",
-    "illuminate/support": "^11.44.2|^12.0|^13.0",
-    "illuminate/database": "^11.44.2|^12.0|^13.0",
-    "illuminate/filesystem": "^11.44.2|^12.0|^13.0"
+    "laravel/framework": "^11.44.2|^12.0|^13.0"
   },
   "autoload": {
     "psr-4": {

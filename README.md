@@ -216,6 +216,11 @@ For users the callback rejects, the middleware fires no `UserWasActiveEvent` and
 - When a user is deleted, `last_seen_at` is deleted with the row.
 - `LAST_SEEN_ENABLED=false` only stops new writes. It does not delete stored values.
 
+## Contributing
+
+See [CONTRIBUTING](.github/CONTRIBUTING.md). Please report security vulnerabilities as described in
+[SECURITY](.github/SECURITY.md) instead of opening a public issue.
+
 ## License
 
 MIT

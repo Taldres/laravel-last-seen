@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Taldres\LastSeen\Tests\Feature;
 
 use Illuminate\Auth\GenericUser;
+use Illuminate\Contracts\Http\Kernel;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Event;
@@ -105,4 +106,13 @@ it('does not dispatch the event for users that do not exist in the database', fu
     $this->actingAs(TimestampedUser::create(['email' => fake()->email()]))->delete('/account')->assertNoContent();
 
     Event::assertNotDispatched(UserWasActiveEvent::class);
+});
+
+it('dispatches the event once when the middleware runs globally and on the route', function () {
+    Event::fake([UserWasActiveEvent::class]);
+    app(Kernel::class)->pushMiddleware(UpdateLastSeenMiddleware::class);
+
+    $this->actingAs(TimestampedUser::create(['email' => fake()->email()]))->get('/last-seen')->assertOk();
+
+    Event::assertDispatchedTimes(UserWasActiveEvent::class, 1);
 });

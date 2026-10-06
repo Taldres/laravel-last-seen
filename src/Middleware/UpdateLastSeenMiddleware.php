@@ -29,9 +29,11 @@ class UpdateLastSeenMiddleware
     {
         $response = $next($request);
 
-        if (! config('last-seen.enabled', true)) {
+        if (! config('last-seen.enabled', true) || $request->attributes->getBoolean('last-seen.handled')) {
             return $response;
         }
+
+        $request->attributes->set('last-seen.handled', true);
 
         $user = Auth::user();
 

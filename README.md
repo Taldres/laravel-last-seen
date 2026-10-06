@@ -116,6 +116,8 @@ Each setting has a default value, so you only need to override them if you want 
   written: no model events are fired, the model's `updated_at` timestamp is left untouched and other unsaved changes on the
   model are not persisted.
 
+`last_seen_at` is not added to your model's `$fillable`. If you need to mass-assign it, add it there yourself or use `forceFill()`.
+
 ### Events
 
 The package fires a `UserWasActiveEvent` whenever user activity is detected. You can listen to this event for custom logic.

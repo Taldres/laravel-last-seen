@@ -19,9 +19,6 @@ trait LastSeen
 {
     public function initializeLastSeen(): void
     {
-        if (! in_array('last_seen_at', $this->fillable, true)) {
-            $this->fillable[] = 'last_seen_at';
-        }
         if (! array_key_exists('last_seen_at', $this->casts)) {
             $this->casts['last_seen_at'] = 'datetime';
         }

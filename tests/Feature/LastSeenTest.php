@@ -16,9 +16,9 @@ it('checks if User model is an Eloquent Model class and implements Authenticatab
         ->and($user)->toBeInstanceOf(Authenticatable::class);
 });
 
-it('checks if fillable and casts includes last_seen_at', function () {
+it('checks if casts include last_seen_at and it is not made fillable', function () {
     $user = new (User::class);
-    expect($user->getFillable())->toContain('last_seen_at')
+    expect($user->getFillable())->not->toContain('last_seen_at')
         ->and($user->getCasts())->toHaveKey('last_seen_at')
         ->and($user->getCasts()['last_seen_at'])->toBe('datetime');
 });
@@ -44,7 +44,7 @@ it('checks if recentlySeen returns true directly after setting', function () {
 });
 
 it('checks if returns false for recentlySeen when last_seen_at is threshold+1 seconds in the past', function () {
-    $user = User::create([
+    $user = User::forceCreate([
         'email' => fake()->email(),
         'last_seen_at' => now()->subSeconds(config('last-seen.recently_seen_threshold') + 1),
     ]);
@@ -65,12 +65,12 @@ it('checks if updating should not be possible when the feature is disabled', fun
 });
 
 it('checks if onlyRecentlySeen scope returns only recently seen users', function () {
-    $recentUser = User::create([
+    $recentUser = User::forceCreate([
         'email' => fake()->email(),
         'last_seen_at' => now(),
     ]);
 
-    $staleUser = User::create([
+    $staleUser = User::forceCreate([
         'email' => fake()->email(),
         'last_seen_at' => now()->subSeconds(config('last-seen.recently_seen_threshold') + 1),
     ]);
@@ -88,7 +88,7 @@ it('checks if onlyRecentlySeen scope returns only recently seen users', function
 it('checks if updateLastSeenAt does not update when within threshold', function () {
     $initialTime = now()->subSeconds(10);
 
-    $user = User::create([
+    $user = User::forceCreate([
         'email' => fake()->email(),
         'last_seen_at' => $initialTime,
     ]);
@@ -102,7 +102,7 @@ it('checks if updateLastSeenAt does not update when within threshold', function 
 it('checks if updateLastSeenAt updates when threshold is exceeded', function () {
     $threshold = (int) config('last-seen.update_threshold');
 
-    $user = User::create([
+    $user = User::forceCreate([
         'email' => fake()->email(),
         'last_seen_at' => now()->subSeconds($threshold + 1),
     ]);

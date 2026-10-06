@@ -119,6 +119,8 @@ All other settings—such as enabling/disabling the feature, update thresholds, 
 - `LAST_SEEN_UPDATE_THRESHOLD`: Minimum seconds between last_seen_at updates (default: 60)
 - `LAST_SEEN_RECENTLY_SEEN_THRESHOLD`: Seconds a user is considered recently seen after last activity (default: 300)
 
+Both thresholds must be integers of 0 or more. Other values throw an `InvalidArgumentException`.
+
 Each setting has a default value, so you only need to override them if you want to change the default behavior.
 
 ## Usage

@@ -8,6 +8,7 @@ use Carbon\CarbonInterface;
 use Closure;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Query\Builder as QueryBuilder;
+use InvalidArgumentException;
 use LogicException;
 use Taldres\LastSeen\Enums\LastSeenDefaultThreshold;
 use Taldres\LastSeen\Trait\LastSeen;
@@ -29,7 +30,7 @@ class LastSeenManager
             return false;
         }
 
-        $threshold = config()->integer('last-seen.update_threshold', LastSeenDefaultThreshold::Update->value);
+        $threshold = $this->threshold('last-seen.update_threshold', LastSeenDefaultThreshold::Update);
 
         $lastSeenAt = array_key_exists('last_seen_at', $user->getAttributes())
             ? $user->getAttribute('last_seen_at')
@@ -111,9 +112,20 @@ class LastSeenManager
      */
     public function recentlySeenSince(): CarbonInterface
     {
-        $threshold = config()->integer('last-seen.recently_seen_threshold', LastSeenDefaultThreshold::RecentlySeen->value);
+        $threshold = $this->threshold('last-seen.recently_seen_threshold', LastSeenDefaultThreshold::RecentlySeen);
 
         return now()->subSeconds($threshold)->startOfSecond();
+    }
+
+    private function threshold(string $key, LastSeenDefaultThreshold $default): int
+    {
+        $threshold = config()->integer($key, $default->value);
+
+        if ($threshold < 0) {
+            throw new InvalidArgumentException("Configuration value for key [{$key}] must be at least 0, {$threshold} given.");
+        }
+
+        return $threshold;
     }
 
     /**

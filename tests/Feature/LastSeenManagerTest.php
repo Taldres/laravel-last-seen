@@ -348,6 +348,27 @@ it('throws for a recently seen threshold that is not an integer', function (mixe
     'null' => null,
 ]);
 
+it('throws for a negative update threshold', function () {
+    config(['last-seen.update_threshold' => -1]);
+
+    $user = User::create(['email' => fake()->email()]);
+
+    expect(fn () => LastSeen::record($user))
+        ->toThrow(InvalidArgumentException::class, 'Configuration value for key [last-seen.update_threshold] must be at least 0, -1 given.')
+        ->and($user->fresh()->last_seen_at)->toBeNull();
+});
+
+it('throws for a negative recently seen threshold', function () {
+    config(['last-seen.recently_seen_threshold' => -1]);
+
+    $user = User::forceCreate(['email' => fake()->email(), 'last_seen_at' => now()]);
+
+    expect(fn () => LastSeen::recentlySeen($user))
+        ->toThrow(InvalidArgumentException::class, 'Configuration value for key [last-seen.recently_seen_threshold] must be at least 0, -1 given.')
+        ->and(fn () => User::onlyRecentlySeen()->get())
+        ->toThrow(InvalidArgumentException::class, 'last-seen.recently_seen_threshold');
+});
+
 it('passes the recorded model instance itself to the trackUsing callback', function () {
     $received = null;
     LastSeen::trackUsing(function (Model $user) use (&$received) {

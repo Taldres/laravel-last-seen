@@ -59,11 +59,14 @@ now ignored instead of causing an error.
 `recentlySeen()` now treats a user seen exactly `LAST_SEEN_RECENTLY_SEEN_THRESHOLD` seconds ago as recently seen.
 This matches the `onlyRecentlySeen()` scope, which already included the threshold.
 
-### Thresholds Must Be Integers
+### Thresholds Must Be Integers of 0 or More
 
 The `update_threshold` and `recently_seen_threshold` config values are now read as integers and throw an exception
 otherwise. The published config file has always cast them, so this only affects code that sets them at runtime, for
 example `config(['last-seen.update_threshold' => '60'])`. Pass integers instead.
+
+Negative values now throw an exception as well, also when they come from `LAST_SEEN_UPDATE_THRESHOLD` or
+`LAST_SEEN_RECENTLY_SEEN_THRESHOLD` in your `.env` file.
 
 ### Migration
 

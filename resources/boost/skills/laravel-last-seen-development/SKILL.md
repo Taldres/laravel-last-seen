@@ -44,7 +44,7 @@ their activity, and `taldres/laravel-last-seen` is installed.
 
 Settings live in `config/last-seen.php` and the `.env` file: `LAST_SEEN_ENABLED`, `LAST_SEEN_UPDATE_THRESHOLD`
 (seconds between writes, default 60) and `LAST_SEEN_RECENTLY_SEEN_THRESHOLD` (seconds a user counts as recently
-seen, default 300).
+seen, default 300). Both thresholds must be integers of 0 or more, otherwise they throw an `InvalidArgumentException`.
 
 ## Reading Activity
 

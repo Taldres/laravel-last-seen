@@ -119,6 +119,16 @@ Each setting has a default value, so you only need to override them if you want 
 
 ## Usage
 
+### How Activity Is Tracked
+
+- Every request that passes through the middleware with an authenticated user counts as activity. This includes
+  background requests such as polling, which can keep an otherwise idle user "recently seen". Leave the middleware off
+  routes that should not count as activity.
+- For each such request of a tracked user the middleware fires a `UserWasActiveEvent`. The event means "activity
+  detected", not "timestamp written": `last_seen_at` is only written once `LAST_SEEN_UPDATE_THRESHOLD` seconds have
+  passed since the stored value, so it can lag behind the latest activity by up to that many seconds. Parallel requests
+  write it only once.
+
 ### Checking Activity
 
 - `$user->recentlySeen()`: Returns `true` if `last_seen_at` is at most `LAST_SEEN_RECENTLY_SEEN_THRESHOLD` seconds ago.

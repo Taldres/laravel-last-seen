@@ -1,0 +1,8 @@
+Generated using the built-in image_gen tool.
+
+Use case: ads-marketing.
+Asset type: finished GitHub repository social preview banner for the independent open-source PHP package taldres/laravel-last-seen.
+Create a polished, restrained developer-tool brand image. Wide landscape 2:1 composition, target 1280 x 640 pixels. Dark warm charcoal background with an extremely subtle fine grain. Crisp ivory typography, Laravel-inspired vermilion/coral accent and a tiny muted green presence indicator. Sophisticated editorial layout with generous negative space and 60px safe margins.
+On the left, large beautifully kerned bold modern sans-serif title, exactly "Laravel" on the first line and "Last Seen" on the second line. Underneath, smaller readable text exactly "User activity tracking for Laravel". At the lower left, a small elegant monospace label exactly "taldres/laravel-last-seen".
+On the right, a distinctive sculptural abstract clock/presence symbol: a precise coral circular clock ring with minimal hands, a small ivory user silhouette integrated with its lower edge, and one green online status dot. Subtle soft depth and tasteful shadows, crisp shapes, modern technical design. Behind it, faint sparse time markers suggesting a recent activity timeline. The symbol should feel like a coherent custom package identity, not stock clip art.
+High contrast and excellent legibility when downscaled. No official Laravel logo, no GitHub logo, no extra text, no badges, no version numbers, no watermark, no laptop or browser mockup. Render the actual full-bleed banner itself.

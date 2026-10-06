@@ -162,6 +162,42 @@ use Illuminate\Support\Facades\Event;
 Event::dispatch(new UserWasActiveEvent($user));
 ```
 
+## Privacy
+
+`last_seen_at` is tied to a user, so it is personal data. Your application decides the purpose, the legal basis, how
+users are informed and how long the data is kept. The package cannot make an application compliant on its own, but it
+keeps the data small and under your control:
+
+- It stores a single `last_seen_at` column on your users table. Each write overwrites the previous value. There is no
+  activity history, and no IP address or user agent is stored.
+- It does not send any data to external services.
+- Who may see another user's activity status is up to your application, for example through policies.
+
+### Opting Users Out
+
+Register a callback in a service provider to decide per user whether activity is tracked, for example based on a user
+setting. The package does not expect any particular column for this:
+
+```php
+use App\Models\User;
+use Taldres\LastSeen\Facades\LastSeen;
+
+public function boot(): void
+{
+    LastSeen::trackUsing(fn (User $user): bool => ! $user->hide_activity_status);
+}
+```
+
+For users the callback rejects, the middleware fires no `UserWasActiveEvent` and `updateLastSeenAt()` leaves
+`last_seen_at` untouched.
+
+### Deleting the Timestamp
+
+- `$user->forgetLastSeenAt()` sets `last_seen_at` to `null`. Combine it with an opt-out, otherwise the next request
+  writes it again.
+- When a user is deleted, `last_seen_at` is deleted with the row.
+- `LAST_SEEN_ENABLED=false` only stops new writes. It does not delete stored values.
+
 ## License
 
 MIT

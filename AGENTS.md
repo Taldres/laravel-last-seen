@@ -7,6 +7,8 @@ Rules for AI coding agents working in this repository.
 - Run `composer lint` to fix the code style, then `composer test` before every commit. `composer test` runs
   PHPStan, the code style check, type coverage and the Pest suite without changing files.
 - Every commit must pass `composer test` on its own.
+- When the public API, configuration or setup changes, update the Laravel Boost skill in
+  `resources/boost/skills/laravel-last-seen-development/SKILL.md` and the README in the same change.
 
 ## Branches
 

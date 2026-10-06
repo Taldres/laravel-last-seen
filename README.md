@@ -180,6 +180,12 @@ use Illuminate\Support\Facades\Event;
 Event::dispatch(new UserWasActiveEvent($user));
 ```
 
+## AI Agents
+
+The package ships a [Laravel Boost](https://laravel.com/framework/docs/boost) skill that teaches coding agents how to use it.
+Boost offers to install it when you run `php artisan boost:install`, or `php artisan boost:update --discover` in an
+existing setup.
+
 ## Privacy
 
 `last_seen_at` is tied to a user, so it is personal data. Your application decides the purpose, the legal basis, how

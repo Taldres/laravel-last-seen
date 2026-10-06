@@ -54,6 +54,9 @@ Laravel 11 is supported up to package version `0.4.x`.
     ```bash
     php artisan migrate
     ```
+
+   If your users table already has a `last_seen_at` column, the migration stops with an error instead of taking over a
+   column it would drop on rollback. Delete the published migration in that case.
    
 5. Add the `Taldres\LastSeen\Trait\LastSeen` trait to your User model:
 

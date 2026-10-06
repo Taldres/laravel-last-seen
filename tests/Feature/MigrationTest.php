@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Taldres\LastSeen\Tests\Feature;
 
 use Illuminate\Support\Facades\Schema;
+use RuntimeException;
 use Taldres\LastSeen\Tests\TestModels\User;
 
 beforeEach(function () {
@@ -18,5 +19,11 @@ it('adds and drops the last_seen_at column on the configured user table', functi
     expect(Schema::hasColumn('users', 'last_seen_at'))->toBeFalse();
 
     $this->migration->up();
+    expect(Schema::hasColumn('users', 'last_seen_at'))->toBeTrue();
+});
+
+it('refuses to take over an existing last_seen_at column', function () {
+    expect(fn () => $this->migration->up())->toThrow(RuntimeException::class);
+
     expect(Schema::hasColumn('users', 'last_seen_at'))->toBeTrue();
 });

@@ -13,10 +13,13 @@ return new class extends Migration
     {
         $tableName = $this->getTableName();
 
-        Schema::table($tableName, static function (Blueprint $table) use ($tableName) {
-            if (! Schema::hasColumn($tableName, 'last_seen_at')) {
-                $table->timestamp('last_seen_at')->nullable();
-            }
+        // down() drops the column, so never take over a column the application already owns.
+        if (Schema::hasColumn($tableName, 'last_seen_at')) {
+            throw new \RuntimeException("The [{$tableName}] table already has a last_seen_at column. Delete this migration if the column is managed by your application.");
+        }
+
+        Schema::table($tableName, static function (Blueprint $table) {
+            $table->timestamp('last_seen_at')->nullable();
         });
     }
 

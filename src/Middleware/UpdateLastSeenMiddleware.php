@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Event;
 use Symfony\Component\HttpFoundation\Response;
 use Taldres\LastSeen\Events\UserWasActiveEvent;
 use Taldres\LastSeen\LastSeenManager;
+use Throwable;
 
 class UpdateLastSeenMiddleware
 {
@@ -41,7 +42,11 @@ class UpdateLastSeenMiddleware
             return $response;
         }
 
-        Event::dispatch(new UserWasActiveEvent($user));
+        try {
+            Event::dispatch(new UserWasActiveEvent($user));
+        } catch (Throwable $exception) {
+            report($exception);
+        }
 
         return $response;
     }

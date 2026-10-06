@@ -6,10 +6,15 @@ namespace Taldres\LastSeen\Tests\Feature;
 
 use Illuminate\Auth\GenericUser;
 use Illuminate\Contracts\Http\Kernel;
+use Illuminate\Database\QueryException;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Exceptions;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Schema;
+use RuntimeException;
 use Taldres\LastSeen\Events\UserWasActiveEvent;
 use Taldres\LastSeen\Facades\LastSeen;
 use Taldres\LastSeen\Middleware\UpdateLastSeenMiddleware;
@@ -115,4 +120,25 @@ it('dispatches the event once when the middleware runs globally and on the route
     $this->actingAs(TimestampedUser::create(['email' => fake()->email()]))->get('/last-seen')->assertOk();
 
     Event::assertDispatchedTimes(UserWasActiveEvent::class, 1);
+});
+
+it('reports a failing write and keeps the response', function () {
+    Exceptions::fake();
+    $user = TimestampedUser::create(['email' => fake()->email()]);
+    Schema::table('users', fn (Blueprint $table) => $table->dropColumn('last_seen_at'));
+
+    Route::post('/posts', fn () => response('created', 201))->middleware(UpdateLastSeenMiddleware::class);
+
+    $this->actingAs($user)->post('/posts')->assertCreated()->assertSee('created');
+
+    Exceptions::assertReported(QueryException::class);
+});
+
+it('reports a failing event listener and keeps the response', function () {
+    Exceptions::fake();
+    Event::listen(UserWasActiveEvent::class, fn () => throw new RuntimeException('listener failed'));
+
+    $this->actingAs(TimestampedUser::create(['email' => fake()->email()]))->get('/last-seen')->assertOk();
+
+    Exceptions::assertReported(RuntimeException::class);
 });

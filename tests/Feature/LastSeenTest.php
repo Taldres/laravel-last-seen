@@ -8,7 +8,11 @@ use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
 use Taldres\LastSeen\Facades\LastSeen;
+use Taldres\LastSeen\Tests\TestModels\CastsMethodUser;
+use Taldres\LastSeen\Tests\TestModels\ImmutableCastUser;
+use Taldres\LastSeen\Tests\TestModels\SubclassedUser;
 use Taldres\LastSeen\Tests\TestModels\TimestampedUser;
+use Taldres\LastSeen\Tests\TestModels\TraitComposedUser;
 use Taldres\LastSeen\Tests\TestModels\User;
 
 it('checks if User model is an Eloquent Model class and implements Authenticatable contract', function () {
@@ -214,3 +218,17 @@ it('checks if forgetLastSeenAt also works when the feature is disabled', functio
 
     expect($user->fresh()->last_seen_at)->toBeNull();
 });
+
+it('keeps a last_seen_at cast that the model defines itself', function (string $model) {
+    expect((new $model)->getCasts()['last_seen_at'])->toBe('immutable_datetime');
+})->with([
+    'cast in the $casts property' => ImmutableCastUser::class,
+    'cast in the casts() method' => CastsMethodUser::class,
+]);
+
+it('adds the datetime cast to subclasses and to models that use the trait through another trait', function (string $model) {
+    expect((new $model)->getCasts()['last_seen_at'])->toBe('datetime');
+})->with([
+    'subclass' => SubclassedUser::class,
+    'trait through another trait' => TraitComposedUser::class,
+]);

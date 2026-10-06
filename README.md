@@ -1,5 +1,5 @@
 [![Packagist Version](https://img.shields.io/packagist/v/taldres/laravel-last-seen)](https://packagist.org/packages/taldres/laravel-last-seen)
-![Tests](https://github.com/Taldres/laravel-last-seen/actions/workflows/run-tests.yml/badge.svg)
+![Tests](https://github.com/Taldres/laravel-last-seen/actions/workflows/tests.yml/badge.svg)
 
 # Laravel Last Seen
 
@@ -161,8 +161,8 @@ LastSeen::shouldTrack($user);    // whether last_seen_at may be written for this
 LastSeen::trackUsing($callback); // decide per user whether to track, see Privacy
 ```
 
-The facade resolves `Taldres\LastSeen\LastSeenManager` from the container, so you can also inject the manager
-directly. The trait, the middleware and the event listener all use it, so the same rules apply everywhere.
+The facade is also registered as the global alias `LastSeen`. It resolves `Taldres\LastSeen\LastSeenManager` from
+the container, so you can also inject the manager directly. The trait, the middleware and the event listener all use it, so the same rules apply everywhere.
 
 ### Events
 
@@ -179,6 +179,12 @@ use Illuminate\Support\Facades\Event;
 
 Event::dispatch(new UserWasActiveEvent($user));
 ```
+
+## AI Agents
+
+The package ships a [Laravel Boost](https://laravel.com/framework/docs/boost) skill that teaches coding agents how to use it.
+Boost offers to install it when you run `php artisan boost:install`, or `php artisan boost:update --discover` in an
+existing setup.
 
 ## Privacy
 

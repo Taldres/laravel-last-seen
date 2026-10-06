@@ -1,0 +1,135 @@
+name: tests
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  schedule:
+    # Weekly, to notice breaking changes in new dependency releases early.
+    - cron: '0 6 * * 1'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Code style and type coverage
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
+        with:
+          php-version: '8.5'
+          coverage: none
+
+      - name: Install dependencies
+        run: composer update --prefer-dist --no-interaction --no-progress
+
+      - name: Check code style
+        run: composer lint:check
+
+      - name: Check type coverage
+        run: composer test:types
+
+  static-analysis:
+    name: Static analysis
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
+        with:
+          php-version: '8.5'
+          coverage: none
+
+      - name: Install dependencies
+        run: composer update --prefer-dist --no-interaction --no-progress
+
+      - name: Run PHPStan
+        run: composer analyse -- --error-format=github
+
+  tests:
+    name: PHP ${{ matrix.php }} - Laravel ${{ matrix.laravel }} - ${{ matrix.stability }} - ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+
+    strategy:
+      fail-fast: true
+      matrix:
+        os: [ubuntu-latest]
+        php: [8.3, 8.4, 8.5]
+        laravel: [12, 13]
+        stability: [prefer-stable]
+        include:
+          - laravel: 12
+            framework: 12.*
+            testbench: 10.*
+          - laravel: 13
+            framework: 13.*
+            testbench: 11.*
+          # Lowest dependencies on the lowest supported PHP version.
+          - os: ubuntu-latest
+            php: 8.3
+            laravel: 12
+            stability: prefer-lowest
+            framework: 12.*
+            testbench: 10.*
+          - os: ubuntu-latest
+            php: 8.3
+            laravel: 13
+            stability: prefer-lowest
+            framework: 13.*
+            testbench: 11.*
+          # A single Windows run with the latest versions.
+          - os: windows-latest
+            php: 8.5
+            laravel: 13
+            stability: prefer-stable
+            framework: 13.*
+            testbench: 11.*
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: mbstring, pdo, pdo_sqlite, sqlite, dom, fileinfo
+          coverage: none
+
+      - name: Allow insecure versions for the lowest dependencies
+        if: matrix.stability == 'prefer-lowest'
+        # The lowest supported Laravel releases have security advisories. They are only
+        # installed to verify compatibility and are never shipped.
+        run: composer config policy.advisories.block false
+
+      - name: Install dependencies
+        run: |
+          composer require "laravel/framework:${{ matrix.framework }}" --no-interaction --no-update
+          composer require --dev "orchestra/testbench:${{ matrix.testbench }}" --no-interaction --no-update
+          composer update --${{ matrix.stability }} --prefer-dist --no-interaction --no-progress
+
+      - name: Run tests
+        run: composer test:unit -- --ci

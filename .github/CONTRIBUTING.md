@@ -12,23 +12,27 @@ composer install
 
 ## Before Opening a Pull Request
 
-Run the full check suite. It fixes the code style with Pint, then runs Pest and PHPStan:
+Fix the code style, then run all checks. The CI runs the same checks and does not fix anything for you:
 
 ```bash
+composer lint
 composer test
 ```
 
-The steps can also be run on their own:
+`composer test` only checks and never changes files. Its steps can also be run on their own:
 
 ```bash
-composer pint       # fix code style
-composer pest       # run the tests
-composer test-stan  # run static analysis
+composer analyse     # static analysis with PHPStan
+composer lint:check  # code style check with Pint
+composer test:types  # type coverage
+composer test:unit   # the Pest test suite
 ```
 
 - Add or update tests for every change in behavior.
 - Keep a pull request focused on one change.
-- Describe user-facing changes in the pull request description; they end up in the release notes.
+- Describe user-facing changes in the pull request description. The release notes are generated from pull request
+  titles, grouped by the label a maintainer assigns: `breaking`, `enhancement`, `bug`, `documentation`,
+  `dependencies` or `maintenance`. Pull requests labelled `skip-changelog` are left out.
 
 ## Security Vulnerabilities
 

@@ -42,6 +42,15 @@ it('names a new migration after the current time', function () {
     );
 });
 
+it('names a new migration when the migrations directory does not exist yet', function () {
+    $this->freezeSecond();
+    File::deleteDirectory($this->migrations);
+
+    expect(($this->migrationFileName)())->toBe(
+        $this->migrations.DIRECTORY_SEPARATOR.now()->format('Y_m_d_His').'_add_last_seen_at_to_users_table.php',
+    );
+});
+
 it('reuses a published migration, also when its path contains glob characters', function () {
     File::put($existing = $this->migrations.DIRECTORY_SEPARATOR.'2020_01_01_000000_add_last_seen_at_to_users_table.php', '<?php');
 

@@ -4,11 +4,9 @@ declare(strict_types=1);
 
 namespace Taldres\LastSeen;
 
-use Illuminate\Filesystem\Filesystem;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
-use SplFileInfo;
 use Taldres\LastSeen\Listeners\LastSeenSubscriber;
 
 class LastSeenServiceProvider extends ServiceProvider
@@ -58,15 +56,13 @@ class LastSeenServiceProvider extends ServiceProvider
     protected function getMigrationFileName(string $migrationFileName): string
     {
         $directory = $this->app->databasePath('migrations');
-        $filesystem = $this->app->make(Filesystem::class);
+        $files = is_dir($directory) ? scandir($directory) : false;
 
-        $published = Collection::make($filesystem->isDirectory($directory) ? $filesystem->files($directory) : [])
-            ->first(fn (SplFileInfo $file) => preg_match(
-                '/^\d{4}_\d{2}_\d{2}_\d{6}_'.preg_quote($migrationFileName, '/').'$/',
-                $file->getFilename(),
-            ) === 1);
+        $published = Collection::make($files ?: [])->first(fn (string $file) => preg_match(
+            '/^\d{4}_\d{2}_\d{2}_\d{6}_'.preg_quote($migrationFileName, '/').'$/',
+            $file,
+        ) === 1);
 
-        return $published?->getPathname()
-            ?? $directory.DIRECTORY_SEPARATOR.now()->format('Y_m_d_His').'_'.$migrationFileName;
+        return $directory.DIRECTORY_SEPARATOR.($published ?? now()->format('Y_m_d_His').'_'.$migrationFileName);
     }
 }

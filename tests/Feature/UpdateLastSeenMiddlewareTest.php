@@ -73,3 +73,21 @@ it('does not dispatch the event for users that should not be tracked', function 
 
     Event::assertNotDispatched(UserWasActiveEvent::class);
 });
+
+it('does not resolve the user when the package is disabled', function () {
+    $calls = 0;
+    Auth::viaRequest('counting', function () use (&$calls) {
+        $calls++;
+
+        return null;
+    });
+    config([
+        'auth.guards.counting' => ['driver' => 'counting'],
+        'auth.defaults.guard' => 'counting',
+        'last-seen.enabled' => false,
+    ]);
+
+    $this->get('/last-seen')->assertOk();
+
+    expect($calls)->toBe(0);
+});

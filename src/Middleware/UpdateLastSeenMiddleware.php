@@ -29,6 +29,10 @@ class UpdateLastSeenMiddleware
     {
         $response = $next($request);
 
+        if (! config('last-seen.enabled', true)) {
+            return $response;
+        }
+
         $user = Auth::user();
 
         if (! $user instanceof Model || ! $this->lastSeen->shouldTrack($user)) {

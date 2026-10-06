@@ -12,3 +12,4 @@ CHANGELOG.md export-ignore
 phpunit.xml export-ignore
 phpstan.neon.dist export-ignore
 pint.json export-ignore
+AGENTS.md export-ignore

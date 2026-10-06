@@ -49,7 +49,7 @@ Laravel 11 is supported up to package version `0.4.x`.
     php artisan config:clear
     ```
    
-4. Run the migration to create the necessary database table:
+4. Run the migration to add the `last_seen_at` column to your users table:
 
     ```bash
     php artisan migrate
@@ -70,12 +70,20 @@ Laravel 11 is supported up to package version `0.4.x`.
     }
     ```
    
-6. Add the middleware to your `web` or `api` middleware group or any other endpoint:
+6. Add the middleware to your `web` or `api` middleware group in `bootstrap/app.php`, or to individual routes:
 
     ```php
-    // ...
-    \Taldres\LastSeen\Middleware\UpdateLastSeenMiddleware::class,
-    // ...
+    // bootstrap/app.php
+    ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->web(append: [
+            \Taldres\LastSeen\Middleware\UpdateLastSeenMiddleware::class,
+        ]);
+
+        // Token-based APIs, e.g. with Laravel Sanctum:
+        $middleware->api(append: [
+            \Taldres\LastSeen\Middleware\UpdateLastSeenMiddleware::class,
+        ]);
+    })
     ```
 
    The middleware resolves the authenticated user after the request has been handled, so it also works when

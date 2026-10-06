@@ -208,8 +208,12 @@ Event::dispatch(new UserWasActiveEvent($user));
 
 ## AI Agents
 
-The package ships a [Laravel Boost](https://laravel.com/framework/docs/boost) skill that teaches coding agents how to use it.
-Boost offers to install it when you run `php artisan boost:install`, or `php artisan boost:update --discover` in an
+The package ships two [Laravel Boost](https://laravel.com/framework/docs/boost) skills for coding agents:
+
+- `laravel-last-seen-development` teaches agents how to use the package.
+- `upgrade-laravel-last-seen-v1` walks agents through the upgrade from 0.4 to 1.0.
+
+Boost offers to install them when you run `php artisan boost:install`, or `php artisan boost:update --discover` in an
 existing setup.
 
 ## Privacy
@@ -252,7 +256,8 @@ workers.
 
 ## Upgrading
 
-See [UPGRADE.md](UPGRADE.md) for the changes between major versions, including the upgrade from 0.4 to 1.0.
+See [UPGRADE.md](UPGRADE.md) for the changes between major versions, including the upgrade from 0.4 to 1.0. It also
+explains how to let a coding agent do the upgrade with the `upgrade-laravel-last-seen-v1` skill.
 
 ## Contributing
 

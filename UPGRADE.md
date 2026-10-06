@@ -38,6 +38,17 @@ $user->forceFill(['last_seen_at' => now()])->save();
 - Other unsaved changes on the model are no longer persisted along with `last_seen_at`. Call `save()` yourself if
   you need them stored.
 - Parallel requests no longer write the timestamp more than once within the update threshold.
+- A new timestamp is written as soon as `LAST_SEEN_UPDATE_THRESHOLD` seconds have passed. 0.4 waited until more than
+  that.
+
+### The Middleware No Longer Calls `updateLastSeenAt()`
+
+In 0.4 the event listener called `updateLastSeenAt()` on the user model, so overriding the method changed what the
+middleware recorded. The middleware and the listener now record through `LastSeenManager::record()`, and only for
+models that use the `LastSeen` trait. An overridden `updateLastSeenAt()` only runs when your own code calls it.
+
+Move logic that skips some users to `LastSeen::trackUsing()`, and other custom logic to a listener for
+`UserWasActiveEvent`.
 
 ### The Middleware Runs After the Request
 
@@ -46,7 +57,8 @@ been handled, instead of before. This makes it work when authentication happens 
 through a route-level `auth:sanctum` middleware.
 
 As a consequence, `last_seen_at` is no longer updated before your controller runs. If a controller relied on seeing
-the fresh timestamp within the same request, call `$user->updateLastSeenAt()` there yourself.
+the fresh timestamp within the same request, call `$user->updateLastSeenAt()` there yourself. The request that logs a
+user in is now recorded, the request that logs a user out is not.
 
 Exceptions while recording activity, for example from your own `UserWasActiveEvent` listeners or your `trackUsing()`
 callback, are now reported instead of replacing the response with an error page.

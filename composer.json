@@ -32,7 +32,7 @@
   },
   "require-dev": {
     "larastan/larastan": "^3.6.0",
-    "laravel/pint": "^1.24.0",
+    "laravel/pint": "^1.29",
     "orchestra/testbench": "^10.0|^11.0",
     "pestphp/pest": "^3.8.2|^4.0",
     "pestphp/pest-plugin-type-coverage": "^3.6|^4.0",
@@ -60,14 +60,12 @@
   },
   "config": {
     "sort-packages": true,
-    "preferred-install": "dist",
-    "optimize-autoloader": true,
     "allow-plugins": {
       "pestphp/pest-plugin": true,
       "larastan/larastan": true
     }
   },
-  "minimum-stability": "dev",
+  "minimum-stability": "stable",
   "prefer-stable": true,
   "scripts": {
     "lint": [
@@ -91,5 +89,13 @@
       "@test:types",
       "@test:unit"
     ]
+  },
+  "scripts-descriptions": {
+    "lint": "Fix the code style with Pint.",
+    "lint:check": "Check the code style with Pint without changing files.",
+    "analyse": "Run the static analysis with PHPStan.",
+    "test:types": "Check that the type coverage is 100%.",
+    "test:unit": "Run the Pest test suite.",
+    "test": "Run all checks without changing files."
   }
 }

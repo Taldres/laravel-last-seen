@@ -6,21 +6,8 @@ namespace Taldres\LastSeen\Tests\Feature;
 
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\Schema;
 use Taldres\LastSeen\Tests\TestModels\User;
-
-uses(RefreshDatabase::class);
-
-beforeEach(function () {
-    Schema::create('users', function (Blueprint $table) {
-        $table->id();
-        $table->string('email')->unique();
-        $table->timestamp('last_seen_at')->nullable();
-    });
-});
 
 it('checks if User model is an Eloquent Model class and implements Authenticatable contract', function () {
     $user = new User;

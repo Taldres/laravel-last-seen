@@ -8,6 +8,7 @@ use Illuminate\Filesystem\Filesystem;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
+use SplFileInfo;
 use Taldres\LastSeen\Listeners\LastSeenSubscriber;
 
 class LastSeenServiceProvider extends ServiceProvider
@@ -54,19 +55,18 @@ class LastSeenServiceProvider extends ServiceProvider
         ]);
     }
 
-    /**
-     * Returns existing migration file if found, else uses the current timestamp.
-     * Thanks to Spatie for this function.
-     */
     protected function getMigrationFileName(string $migrationFileName): string
     {
-        $timestamp = date('Y_m_d_His');
-
+        $directory = $this->app->databasePath('migrations');
         $filesystem = $this->app->make(Filesystem::class);
 
-        return Collection::make([$this->app->databasePath().DIRECTORY_SEPARATOR.'migrations'.DIRECTORY_SEPARATOR])
-            ->flatMap(fn (string $path) => $filesystem->glob($path.'*_'.$migrationFileName))
-            ->push($this->app->databasePath()."/migrations/{$timestamp}_{$migrationFileName}")
-            ->first();
+        $published = Collection::make($filesystem->isDirectory($directory) ? $filesystem->files($directory) : [])
+            ->first(fn (SplFileInfo $file) => preg_match(
+                '/^\d{4}_\d{2}_\d{2}_\d{6}_'.preg_quote($migrationFileName, '/').'$/',
+                $file->getFilename(),
+            ) === 1);
+
+        return $published?->getPathname()
+            ?? $directory.DIRECTORY_SEPARATOR.now()->format('Y_m_d_His').'_'.$migrationFileName;
     }
 }

@@ -10,6 +10,7 @@ use InvalidArgumentException;
 use RuntimeException;
 use stdClass;
 use Taldres\LastSeen\Tests\TestModels\AbstractUser;
+use Taldres\LastSeen\Tests\TestModels\RenamedUser;
 use Taldres\LastSeen\Tests\TestModels\SecondaryConnectionUser;
 use Taldres\LastSeen\Tests\TestModels\User;
 
@@ -67,4 +68,17 @@ it('runs on the connection of the user model', function () {
 
     expect(Schema::connection('secondary')->hasColumn('users', 'last_seen_at'))->toBeFalse()
         ->and(Schema::hasColumn('users', 'last_seen_at'))->toBeTrue();
+});
+
+it('drops the column in down() after the table was renamed', function () {
+    $this->migration->down();
+    $this->migration->up();
+
+    Schema::rename('users', 'accounts');
+    config(['last-seen.models.user' => RenamedUser::class]);
+
+    $this->migration->down();
+
+    expect(Schema::hasColumn('accounts', 'last_seen_at'))->toBeFalse()
+        ->and(Schema::getIndexes('accounts'))->each(fn ($index) => $index->columns->not->toContain('last_seen_at'));
 });

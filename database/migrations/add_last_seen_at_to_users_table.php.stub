@@ -34,14 +34,19 @@ return new class extends Migration
         $schema = Schema::connection($this->getConnection());
         $tableName = $this->userModel()->getTable();
 
-        $schema->table($tableName, static function (Blueprint $table) use ($schema, $tableName) {
-            if ($schema->hasColumn($tableName, 'last_seen_at')) {
-                if ($schema->hasIndex($tableName, ['last_seen_at'])) {
-                    $table->dropIndex(['last_seen_at']);
-                }
+        if (! $schema->hasColumn($tableName, 'last_seen_at')) {
+            return;
+        }
 
-                $table->dropColumn('last_seen_at');
+        $index = collect($schema->getIndexes($tableName))
+            ->first(fn (array $index) => $index['columns'] === ['last_seen_at'] && ! $index['primary'] && ! $index['unique']);
+
+        $schema->table($tableName, static function (Blueprint $table) use ($index) {
+            if ($index !== null) {
+                $table->dropIndex($index['name']);
             }
+
+            $table->dropColumn('last_seen_at');
         });
     }
 

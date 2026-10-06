@@ -139,3 +139,21 @@ it('checks if updateLastSeenAt does not persist other unsaved attributes', funct
         ->and($user->fresh()->email)->toBe($email)
         ->and($user->fresh()->last_seen_at)->not->toBeNull();
 });
+
+it('checks if updateLastSeenAt does not write again when another instance already updated it', function () {
+    $this->freezeSecond();
+
+    $user = User::forceCreate([
+        'email' => fake()->email(),
+        'last_seen_at' => now()->subSeconds(config()->integer('last-seen.update_threshold') + 1),
+    ]);
+
+    $first = User::find($user->id);
+    $second = User::find($user->id);
+
+    $first->updateLastSeenAt();
+    $this->travel(5)->seconds();
+    $second->updateLastSeenAt();
+
+    expect($user->fresh()->last_seen_at->timestamp)->toBe($first->last_seen_at->timestamp);
+});

@@ -6,6 +6,7 @@ namespace Taldres\LastSeen\Trait;
 
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Support\Carbon;
 use Taldres\LastSeen\Enums\LastSeenDefaultThreshold;
 
@@ -36,15 +37,22 @@ trait LastSeen
 
         if (! $this->last_seen_at || $this->last_seen_at->diffInSeconds(now()) > $threshold) {
             $timestamp = $this->freshTimestamp();
+            $outdated = $this->fromDateTime($timestamp->copy()->subSeconds($threshold));
 
             // Write only last_seen_at through the base query builder, so updated_at, model events
-            // and other unsaved attributes stay untouched, then sync the in-memory model.
-            $this->newModelQuery()
+            // and other unsaved attributes stay untouched. The threshold is checked again in the
+            // query, so parallel requests write only once.
+            $written = $this->newModelQuery()
                 ->whereKey($this->getKey())
                 ->toBase()
-                ->update(['last_seen_at' => $this->fromDateTime($timestamp)]);
+                ->where(fn (QueryBuilder $query) => $query
+                    ->whereNull('last_seen_at')
+                    ->orWhere('last_seen_at', '<=', $outdated))
+                ->update(['last_seen_at' => $this->fromDateTime($timestamp)]) > 0;
 
-            $this->forceFill(['last_seen_at' => $timestamp])->syncOriginalAttribute('last_seen_at');
+            if ($written) {
+                $this->forceFill(['last_seen_at' => $timestamp])->syncOriginalAttribute('last_seen_at');
+            }
         }
     }
 

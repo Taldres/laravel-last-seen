@@ -31,7 +31,7 @@ trait LastSeen
             return;
         }
 
-        $threshold = (int) config('last-seen.update_threshold', LastSeenDefaultThreshold::Update->value);
+        $threshold = config()->integer('last-seen.update_threshold', LastSeenDefaultThreshold::Update->value);
 
         if (! $this->last_seen_at || $this->last_seen_at->diffInSeconds(now()) > $threshold) {
             $timestamp = $this->freshTimestamp();
@@ -71,7 +71,7 @@ trait LastSeen
      */
     private function recentlySeenSince(): CarbonInterface
     {
-        $threshold = (int) config('last-seen.recently_seen_threshold', LastSeenDefaultThreshold::RecentlySeen->value);
+        $threshold = config()->integer('last-seen.recently_seen_threshold', LastSeenDefaultThreshold::RecentlySeen->value);
 
         return now()->subSeconds($threshold)->startOfSecond();
     }

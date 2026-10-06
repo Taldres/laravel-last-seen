@@ -120,15 +120,32 @@ A `last_seen_at` in the future, e.g. caused by clock drift between servers, coun
 
 ### Updating Activity
 
-- `$user->updateLastSeenAt()`: Writes `last_seen_at` if the configured update threshold has passed. Only `last_seen_at` is
-  written: no model events are fired, the model's `updated_at` timestamp is left untouched and other unsaved changes on the
-  model are not persisted.
+- `$user->updateLastSeenAt()`: Writes `last_seen_at` if the user is tracked and the configured update threshold has
+  passed, and returns whether it wrote. Only `last_seen_at` is written: no model events are fired, the model's
+  `updated_at` timestamp is left untouched and other unsaved changes on the model are not persisted.
 
 `last_seen_at` is not added to your model's `$fillable`. If you need to mass-assign it, add it there yourself or use `forceFill()`.
 
+### Facade
+
+The `LastSeen` facade offers the same operations for code outside the model, such as controllers, jobs and commands:
+
+```php
+use Taldres\LastSeen\Facades\LastSeen;
+
+LastSeen::record($user);         // same as $user->updateLastSeenAt()
+LastSeen::recentlySeen($user);   // same as $user->recentlySeen()
+LastSeen::recentlySeenSince();   // earliest last_seen_at that still counts as recently seen
+LastSeen::shouldTrack($user);    // whether last_seen_at may be written for this user
+```
+
+The facade resolves `Taldres\LastSeen\LastSeenManager` from the container, so you can also inject the manager
+directly. The trait, the middleware and the event listener all use it, so the same rules apply everywhere.
+
 ### Events
 
-The package fires a `UserWasActiveEvent` whenever user activity is detected. You can listen to this event for custom logic.
+The package fires a `UserWasActiveEvent` whenever activity of a tracked user is detected. You can listen to this event
+for custom logic. Recording the activity never fires the event again.
 
 ### Manually Dispatching the Event
 

@@ -139,8 +139,8 @@ Each setting has a default value, so you only need to override them if you want 
   request switches users, for example while an admin impersonates someone, only the final user is.
 - Error responses count as activity too. Registering the middleware twice, for example globally and on a route, still
   records each request once.
-- If recording fails, for example because of a database error or an exception in one of your listeners, the exception
-  is reported and the response is returned unchanged.
+- If resolving the user or recording fails, for example because of a database error or an exception in your
+  `trackUsing()` callback or one of your listeners, the exception is reported and the response is returned unchanged.
 
 ### Checking Activity
 

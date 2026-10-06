@@ -81,7 +81,7 @@ LastSeen::trackUsing(fn (User $user): bool => ! $user->hide_activity_status);
 
 The middleware fires `Taldres\LastSeen\Events\UserWasActiveEvent` once per request for the user authenticated after the
 request, so logout requests are not recorded. Listen to it for custom logic. Recording activity never fires the event
-again, and exceptions from listeners are reported without changing the response.
+again. Exceptions from the guard, the `trackUsing()` callback and listeners are reported without changing the response.
 
 ## Testing
 

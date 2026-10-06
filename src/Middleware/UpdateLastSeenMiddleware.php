@@ -36,14 +36,12 @@ class UpdateLastSeenMiddleware
 
         $request->attributes->set('last-seen.handled', true);
 
-        $user = Auth::user();
-
-        if (! $user instanceof Model || ! $user->exists || ! $this->lastSeen->shouldTrack($user)) {
-            return $response;
-        }
-
         try {
-            Event::dispatch(new UserWasActiveEvent($user));
+            $user = Auth::user();
+
+            if ($user instanceof Model && $user->exists && $this->lastSeen->shouldTrack($user)) {
+                Event::dispatch(new UserWasActiveEvent($user));
+            }
         } catch (Throwable $exception) {
             report($exception);
         }

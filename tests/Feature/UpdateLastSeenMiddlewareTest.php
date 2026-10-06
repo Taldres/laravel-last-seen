@@ -151,6 +151,29 @@ it('reports a failing event listener and keeps the response', function () {
     Exceptions::assertReported(RuntimeException::class);
 });
 
+it('reports a failing trackUsing callback and keeps the response', function () {
+    Exceptions::fake();
+    Event::fake([UserWasActiveEvent::class]);
+    LastSeen::trackUsing(fn (): bool => throw new RuntimeException('callback failed'));
+
+    Route::post('/posts', fn () => response('created', 201))->middleware(UpdateLastSeenMiddleware::class);
+
+    $this->actingAs(TimestampedUser::create(['email' => fake()->email()]))->post('/posts')->assertCreated()->assertSee('created');
+
+    Exceptions::assertReported(fn (RuntimeException $exception) => $exception->getMessage() === 'callback failed');
+    Event::assertNotDispatched(UserWasActiveEvent::class);
+});
+
+it('reports a guard that fails to resolve the user and keeps the response', function () {
+    Exceptions::fake();
+    Auth::viaRequest('failing', fn () => throw new RuntimeException('guard failed'));
+    config(['auth.guards.failing' => ['driver' => 'failing'], 'auth.defaults.guard' => 'failing']);
+
+    $this->get('/last-seen')->assertOk()->assertSee('ok');
+
+    Exceptions::assertReported(fn (RuntimeException $exception) => $exception->getMessage() === 'guard failed');
+});
+
 it('records activity when the enabled key is missing from the config', function () {
     config(['last-seen' => Arr::except(config('last-seen'), 'enabled')]);
     $user = TimestampedUser::create(['email' => fake()->email()]);

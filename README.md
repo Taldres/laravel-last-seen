@@ -161,8 +161,8 @@ LastSeen::shouldTrack($user);    // whether last_seen_at may be written for this
 LastSeen::trackUsing($callback); // decide per user whether to track, see Privacy
 ```
 
-The facade resolves `Taldres\LastSeen\LastSeenManager` from the container, so you can also inject the manager
-directly. The trait, the middleware and the event listener all use it, so the same rules apply everywhere.
+The facade is also registered as the global alias `LastSeen`. It resolves `Taldres\LastSeen\LastSeenManager` from
+the container, so you can also inject the manager directly. The trait, the middleware and the event listener all use it, so the same rules apply everywhere.
 
 ### Events
 

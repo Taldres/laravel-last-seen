@@ -52,7 +52,10 @@
     "laravel": {
       "providers": [
         "Taldres\\LastSeen\\LastSeenServiceProvider"
-      ]
+      ],
+      "aliases": {
+        "LastSeen": "Taldres\\LastSeen\\Facades\\LastSeen"
+      }
     }
   },
   "config": {

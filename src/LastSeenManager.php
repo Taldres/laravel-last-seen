@@ -42,7 +42,7 @@ class LastSeenManager
         // and other unsaved attributes stay untouched. The threshold is checked again in the
         // query, so parallel requests write only once.
         $written = $user->newModelQuery()
-            ->whereKey($user->getKey())
+            ->whereKey($this->originalKey($user))
             ->toBase()
             ->where(fn (QueryBuilder $query) => $query
                 ->whereNull('last_seen_at')
@@ -66,9 +66,14 @@ class LastSeenManager
             return;
         }
 
-        $user->newModelQuery()->whereKey($user->getKey())->toBase()->update(['last_seen_at' => null]);
+        $user->newModelQuery()->whereKey($this->originalKey($user))->toBase()->update(['last_seen_at' => null]);
 
         $user->forceFill(['last_seen_at' => null])->syncOriginalAttribute('last_seen_at');
+    }
+
+    private function originalKey(Model $user): mixed
+    {
+        return $user->getRawOriginal($user->getKeyName()) ?? $user->getKey();
     }
 
     public function recentlySeen(Model $user): bool

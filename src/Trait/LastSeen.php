@@ -25,7 +25,7 @@ trait LastSeen
 
     /**
      * Writes last_seen_at if tracking is allowed and the update threshold has passed.
-     * Returns whether the timestamp was written.
+     * Returns whether the stored timestamp changed.
      */
     public function updateLastSeenAt(): bool
     {
@@ -50,7 +50,12 @@ trait LastSeen
      */
     public function scopeOnlyRecentlySeen(Builder $builder): void
     {
-        $builder->whereNotNull('last_seen_at')
-            ->where('last_seen_at', '>=', app(LastSeenManager::class)->recentlySeenSince());
+        $column = $builder->qualifyColumn('last_seen_at');
+        $since = $builder->getModel()->newInstance()
+            ->forceFill(['last_seen_at' => app(LastSeenManager::class)->recentlySeenSince()])
+            ->getAttributes()['last_seen_at'];
+
+        $builder->whereNotNull($column)
+            ->where($column, '>=', $since);
     }
 }

@@ -133,3 +133,71 @@ jobs:
 
       - name: Run tests
         run: composer test:unit -- --ci
+
+  databases:
+    name: ${{ matrix.database }} - PHP 8.5 - Laravel 13
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - database: MySQL 8.4
+            image: mysql:8.4
+            connection: mysql
+            port: 3306
+            health-cmd: mysqladmin ping -h 127.0.0.1
+          - database: PostgreSQL 18
+            image: postgres:18
+            connection: pgsql
+            port: 5432
+            health-cmd: pg_isready -h 127.0.0.1
+
+    services:
+      database:
+        image: ${{ matrix.image }}
+        env:
+          MYSQL_RANDOM_ROOT_PASSWORD: 'yes'
+          MYSQL_DATABASE: testing
+          MYSQL_USER: testing
+          MYSQL_PASSWORD: password
+          POSTGRES_DB: testing
+          POSTGRES_USER: testing
+          POSTGRES_PASSWORD: password
+        ports:
+          - ${{ matrix.port }}:${{ matrix.port }}
+        options: >-
+          --health-cmd="${{ matrix.health-cmd }}"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
+        with:
+          php-version: '8.5'
+          extensions: mbstring, pdo, pdo_mysql, pdo_pgsql, pdo_sqlite, sqlite, dom, fileinfo
+          coverage: none
+
+      - name: Install dependencies
+        run: |
+          composer require "laravel/framework:13.*" --no-interaction --no-update
+          composer require --dev "orchestra/testbench:11.*" --no-interaction --no-update
+          composer update --prefer-stable --prefer-dist --no-interaction --no-progress
+
+      - name: Run tests
+        run: composer test:unit -- --ci
+        env:
+          DB_CONNECTION: ${{ matrix.connection }}
+          DB_HOST: 127.0.0.1
+          DB_PORT: ${{ matrix.port }}
+          DB_DATABASE: testing
+          DB_USERNAME: testing
+          DB_PASSWORD: password

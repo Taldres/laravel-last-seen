@@ -119,6 +119,8 @@ All other settings—such as enabling/disabling the feature, update thresholds, 
 - `LAST_SEEN_UPDATE_THRESHOLD`: Minimum seconds between last_seen_at updates (default: 60)
 - `LAST_SEEN_RECENTLY_SEEN_THRESHOLD`: Seconds a user is considered recently seen after last activity (default: 300)
 
+Both thresholds must be integers of 0 or more. Other values throw an `InvalidArgumentException`.
+
 Each setting has a default value, so you only need to override them if you want to change the default behavior.
 
 ## Usage
@@ -132,19 +134,32 @@ Each setting has a default value, so you only need to override them if you want 
   detected", not "timestamp written": `last_seen_at` is only written once `LAST_SEEN_UPDATE_THRESHOLD` seconds have
   passed since the stored value, so it can lag behind the latest activity by up to that many seconds. Parallel requests
   write it only once.
+- The middleware records the user that is authenticated once the request has been handled: the user of the default
+  guard, or of the guard an `auth:<guard>` middleware selected. Logout requests are therefore not recorded, and when a
+  request switches users, for example while an admin impersonates someone, only the final user is.
+- Error responses count as activity too. Registering the middleware twice, for example globally and on a route, still
+  records each request once.
+- If resolving the user or recording fails, for example because of a database error or an exception in your
+  `trackUsing()` callback or one of your listeners, the exception is reported and the response is returned unchanged.
 
 ### Checking Activity
 
 - `$user->recentlySeen()`: Returns `true` if `last_seen_at` is at most `LAST_SEEN_RECENTLY_SEEN_THRESHOLD` seconds ago.
 - `User::onlyRecentlySeen()`: Query scope to get only recently seen users, using the same rule as `recentlySeen()`.
 
-A `last_seen_at` in the future, e.g. caused by clock drift between servers, counts as recently seen.
+A `last_seen_at` in the future, e.g. caused by clock drift between servers, counts as recently seen until the next
+recorded activity replaces it.
+
+Keep `app.timezone` on UTC. With another timezone, `last_seen_at` is stored as local time, which is ambiguous for an hour
+when daylight saving time ends, just like Laravel's own timestamps.
 
 ### Updating Activity
 
 - `$user->updateLastSeenAt()`: Writes `last_seen_at` if the user is tracked and the configured update threshold has
-  passed, and returns whether it wrote. Only `last_seen_at` is written: no model events are fired, the model's
-  `updated_at` timestamp is left untouched and other unsaved changes on the model are not persisted.
+  passed, and returns whether the stored timestamp changed. With an update threshold of `0` it writes on every call
+  unless `last_seen_at` already holds the current time, for example within the same second with the default date
+  format. Only `last_seen_at` is written: no model events are fired, the model's `updated_at` timestamp is left
+  untouched and other unsaved changes on the model are not persisted.
 - `$user->forgetLastSeenAt()`: Sets `last_seen_at` to `null`, again without touching `updated_at` or other unsaved
   changes. It works even when the package is disabled.
 
@@ -172,6 +187,13 @@ the container, so you can also inject the manager directly. The trait, the middl
 
 The package fires a `UserWasActiveEvent` whenever activity of a tracked user is detected. You can listen to this event
 for custom logic. Recording the activity never fires the event again.
+
+### Testing Your Application
+
+- Use `Event::fake([UserWasActiveEvent::class])` to assert that activity was detected without writing anything.
+- Disable tracking with `config(['last-seen.enabled' => false])` or `LastSeen::trackUsing(fn () => false)`.
+- When mocking the facade, use `LastSeen::partialMock()` or stub `shouldTrack()`. A `LastSeen::spy()` returns `false`
+  from `shouldTrack()`, so the middleware never calls `record()`.
 
 ### Manually Dispatching the Event
 
@@ -217,12 +239,14 @@ public function boot(): void
 ```
 
 For users the callback rejects, the middleware fires no `UserWasActiveEvent` and `updateLastSeenAt()` leaves
-`last_seen_at` untouched.
+`last_seen_at` untouched. The callback receives every model that uses the trait, so type-hint `Model` if more than one
+of your models does. Register it once while booting: it stays active for all later requests, also in Octane or queue
+workers.
 
 ### Deleting the Timestamp
 
 - `$user->forgetLastSeenAt()` sets `last_seen_at` to `null`. Combine it with an opt-out, otherwise the next request
-  writes it again.
+  writes it again. It throws a `LogicException` for a model that was loaded without its primary key.
 - When a user is deleted, `last_seen_at` is deleted with the row.
 - `LAST_SEEN_ENABLED=false` only stops new writes. It does not delete stored values.
 

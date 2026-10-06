@@ -48,6 +48,9 @@ through a route-level `auth:sanctum` middleware.
 As a consequence, `last_seen_at` is no longer updated before your controller runs. If a controller relied on seeing
 the fresh timestamp within the same request, call `$user->updateLastSeenAt()` there yourself.
 
+Exceptions while recording activity, for example from your own `UserWasActiveEvent` listeners or your `trackUsing()`
+callback, are now reported instead of replacing the response with an error page.
+
 Authenticated users that are not Eloquent models, for example a `GenericUser` from the `database` user provider, are
 now ignored instead of causing an error.
 
@@ -56,11 +59,14 @@ now ignored instead of causing an error.
 `recentlySeen()` now treats a user seen exactly `LAST_SEEN_RECENTLY_SEEN_THRESHOLD` seconds ago as recently seen.
 This matches the `onlyRecentlySeen()` scope, which already included the threshold.
 
-### Thresholds Must Be Integers
+### Thresholds Must Be Integers of 0 or More
 
 The `update_threshold` and `recently_seen_threshold` config values are now read as integers and throw an exception
 otherwise. The published config file has always cast them, so this only affects code that sets them at runtime, for
 example `config(['last-seen.update_threshold' => '60'])`. Pass integers instead.
+
+Negative values now throw an exception as well, also when they come from `LAST_SEEN_UPDATE_THRESHOLD` or
+`LAST_SEEN_RECENTLY_SEEN_THRESHOLD` in your `.env` file.
 
 ### Migration
 

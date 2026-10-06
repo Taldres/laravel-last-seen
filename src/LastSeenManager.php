@@ -8,6 +8,8 @@ use Carbon\CarbonInterface;
 use Closure;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Query\Builder as QueryBuilder;
+use InvalidArgumentException;
+use LogicException;
 use Taldres\LastSeen\Enums\LastSeenDefaultThreshold;
 use Taldres\LastSeen\Trait\LastSeen;
 
@@ -20,34 +22,44 @@ class LastSeenManager
 
     /**
      * Writes last_seen_at if tracking is allowed and the update threshold has passed.
-     * Returns whether the timestamp was written.
+     * Returns whether the stored timestamp changed.
      */
     public function record(Model $user): bool
     {
-        if (! $user->exists || ! $this->shouldTrack($user)) {
+        if (! $user->exists || ! config('last-seen.enabled', true)) {
             return false;
         }
 
-        $threshold = config()->integer('last-seen.update_threshold', LastSeenDefaultThreshold::Update->value);
-        $lastSeenAt = $user->getAttribute('last_seen_at');
+        $threshold = $this->threshold('last-seen.update_threshold', LastSeenDefaultThreshold::Update);
 
-        if ($lastSeenAt instanceof CarbonInterface && $lastSeenAt->diffInSeconds(now()) <= $threshold) {
+        $lastSeenAt = array_key_exists('last_seen_at', $user->getAttributes())
+            ? $user->getAttribute('last_seen_at')
+            : null;
+
+        if ($lastSeenAt instanceof CarbonInterface && ! $lastSeenAt->isFuture() && $lastSeenAt->diffInSeconds(now()) < $threshold) {
+            return false;
+        }
+
+        if (! $this->shouldTrack($user)) {
             return false;
         }
 
         $timestamp = $user->freshTimestamp();
-        $outdated = $user->fromDateTime($timestamp->copy()->subSeconds($threshold));
+        $now = $this->storable($user, $timestamp);
+        $outdated = $this->storable($user, $timestamp->copy()->subSeconds($threshold));
 
         // Write only last_seen_at through the base query builder, so updated_at, model events
         // and other unsaved attributes stay untouched. The threshold is checked again in the
-        // query, so parallel requests write only once.
+        // query, so parallel requests write only once. With a threshold of 0, a row that
+        // already holds the current timestamp is left alone.
         $written = $user->newModelQuery()
-            ->whereKey($user->getKey())
+            ->whereKey($this->originalKey($user))
             ->toBase()
             ->where(fn (QueryBuilder $query) => $query
                 ->whereNull('last_seen_at')
-                ->orWhere('last_seen_at', '<=', $outdated))
-            ->update(['last_seen_at' => $user->fromDateTime($timestamp)]) > 0;
+                ->orWhere('last_seen_at', $threshold > 0 ? '<=' : '<', $outdated)
+                ->orWhere('last_seen_at', '>', $now))
+            ->update(['last_seen_at' => $now]) > 0;
 
         if ($written) {
             $user->forceFill(['last_seen_at' => $timestamp])->syncOriginalAttribute('last_seen_at');
@@ -66,9 +78,25 @@ class LastSeenManager
             return;
         }
 
-        $user->newModelQuery()->whereKey($user->getKey())->toBase()->update(['last_seen_at' => null]);
+        $key = $this->originalKey($user);
+
+        if ($key === null) {
+            throw new LogicException('Cannot forget last_seen_at of a model that was loaded without its primary key.');
+        }
+
+        $user->newModelQuery()->whereKey($key)->toBase()->update(['last_seen_at' => null]);
 
         $user->forceFill(['last_seen_at' => null])->syncOriginalAttribute('last_seen_at');
+    }
+
+    private function storable(Model $user, CarbonInterface $value): mixed
+    {
+        return $user->newInstance()->forceFill(['last_seen_at' => $value])->getAttributes()['last_seen_at'];
+    }
+
+    private function originalKey(Model $user): mixed
+    {
+        return $user->getRawOriginal($user->getKeyName()) ?? $user->getKey();
     }
 
     public function recentlySeen(Model $user): bool
@@ -84,9 +112,20 @@ class LastSeenManager
      */
     public function recentlySeenSince(): CarbonInterface
     {
-        $threshold = config()->integer('last-seen.recently_seen_threshold', LastSeenDefaultThreshold::RecentlySeen->value);
+        $threshold = $this->threshold('last-seen.recently_seen_threshold', LastSeenDefaultThreshold::RecentlySeen);
 
         return now()->subSeconds($threshold)->startOfSecond();
+    }
+
+    private function threshold(string $key, LastSeenDefaultThreshold $default): int
+    {
+        $threshold = config()->integer($key, $default->value);
+
+        if ($threshold < 0) {
+            throw new InvalidArgumentException("Configuration value for key [{$key}] must be at least 0, {$threshold} given.");
+        }
+
+        return $threshold;
     }
 
     /**

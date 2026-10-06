@@ -9,49 +9,55 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
+    public function getConnection(): ?string
+    {
+        return $this->userModel()->getConnectionName() ?? $this->connection;
+    }
+
     public function up(): void
     {
-        $tableName = $this->getTableName();
+        $schema = Schema::connection($this->getConnection());
+        $tableName = $this->userModel()->getTable();
 
         // down() drops the column, so never take over a column the application already owns.
-        if (Schema::hasColumn($tableName, 'last_seen_at')) {
+        if ($schema->hasColumn($tableName, 'last_seen_at')) {
             throw new \RuntimeException("The [{$tableName}] table already has a last_seen_at column. Delete this migration if the column is managed by your application.");
         }
 
-        Schema::table($tableName, static function (Blueprint $table) {
+        $schema->table($tableName, static function (Blueprint $table) {
             $table->timestamp('last_seen_at')->nullable()->index();
         });
     }
 
     public function down(): void
     {
-        $tableName = $this->getTableName();
+        $schema = Schema::connection($this->getConnection());
+        $tableName = $this->userModel()->getTable();
 
-        Schema::table($tableName, static function (Blueprint $table) use ($tableName) {
-            if (Schema::hasColumn($tableName, 'last_seen_at')) {
-                if (Schema::hasIndex($tableName, ['last_seen_at'])) {
-                    $table->dropIndex(['last_seen_at']);
-                }
+        if (! $schema->hasColumn($tableName, 'last_seen_at')) {
+            return;
+        }
 
-                $table->dropColumn('last_seen_at');
+        $index = collect($schema->getIndexes($tableName))
+            ->first(fn (array $index) => $index['columns'] === ['last_seen_at'] && ! $index['primary'] && ! $index['unique']);
+
+        $schema->table($tableName, static function (Blueprint $table) use ($index) {
+            if ($index !== null) {
+                $table->dropIndex($index['name']);
             }
+
+            $table->dropColumn('last_seen_at');
         });
     }
 
-    private function getTableName(): string
+    private function userModel(): Model
     {
-        $modelClassName = config('last-seen.models.user', null);
+        $modelClassName = config('last-seen.models.user');
 
-        if (empty($modelClassName) || ! class_exists($modelClassName)) {
+        if (! is_string($modelClassName) || ! is_subclass_of($modelClassName, Model::class) || (new \ReflectionClass($modelClassName))->isAbstract()) {
             throw new \InvalidArgumentException('The user model must be set in the last-seen configuration file. Run [php artisan config:clear] and try again.');
         }
 
-        $userModel = new $modelClassName;
-
-        if (! $userModel instanceof Model) {
-            throw new \InvalidArgumentException('The user model must be set in the last-seen configuration file.');
-        }
-
-        return $userModel->getTable();
+        return new $modelClassName;
     }
 };

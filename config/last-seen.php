@@ -22,14 +22,14 @@ return [
     /*
      * The minimum number of seconds that must pass before the user's last_seen_at timestamp is updated again.
      * This helps to avoid excessive database writes when users are active.
-     * Default is 60 seconds.
+     * Must be 0 or more. Default is 60 seconds.
      */
     'update_threshold' => (int) env('LAST_SEEN_UPDATE_THRESHOLD', LastSeenDefaultThreshold::Update->value),
 
     /*
      * The number of seconds a user is considered recently seen after their last activity.
-     * If the difference between now and last_seen_at is less than this value, the user is considered recently active.
-     * Default is 300 seconds (5 minutes).
+     * A user counts as recently seen while last_seen_at is at most this many seconds ago.
+     * Must be 0 or more. Default is 300 seconds (5 minutes).
      */
     'recently_seen_threshold' => (int) env('LAST_SEEN_RECENTLY_SEEN_THRESHOLD', LastSeenDefaultThreshold::RecentlySeen->value),
 ];

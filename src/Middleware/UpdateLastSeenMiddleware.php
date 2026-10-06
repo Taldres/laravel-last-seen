@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Event;
 use Symfony\Component\HttpFoundation\Response;
 use Taldres\LastSeen\Events\UserWasActiveEvent;
 use Taldres\LastSeen\LastSeenManager;
+use Throwable;
 
 class UpdateLastSeenMiddleware
 {
@@ -29,13 +30,21 @@ class UpdateLastSeenMiddleware
     {
         $response = $next($request);
 
-        $user = Auth::user();
-
-        if (! $user instanceof Model || ! $this->lastSeen->shouldTrack($user)) {
+        if (! config('last-seen.enabled', true) || $request->attributes->getBoolean('last-seen.handled')) {
             return $response;
         }
 
-        Event::dispatch(new UserWasActiveEvent($user));
+        $request->attributes->set('last-seen.handled', true);
+
+        try {
+            $user = Auth::user();
+
+            if ($user instanceof Model && $user->exists && $this->lastSeen->shouldTrack($user)) {
+                Event::dispatch(new UserWasActiveEvent($user));
+            }
+        } catch (Throwable $exception) {
+            report($exception);
+        }
 
         return $response;
     }

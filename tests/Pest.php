@@ -29,3 +29,14 @@ pest()->extend(TestCase::class)
         });
     })
     ->in('Feature');
+
+function createUnixTimestampUsersTable(): void
+{
+    Schema::create('unix_timestamp_users', function (Blueprint $table) {
+        $table->id();
+        $table->string('email');
+        $table->unsignedInteger('last_seen_at')->nullable();
+        $table->unsignedInteger('created_at')->nullable();
+        $table->unsignedInteger('updated_at')->nullable();
+    });
+}

@@ -148,6 +148,9 @@ Each setting has a default value, so you only need to override them if you want 
 A `last_seen_at` in the future, e.g. caused by clock drift between servers, counts as recently seen until the next
 recorded activity replaces it.
 
+Keep `app.timezone` on UTC. With another timezone, `last_seen_at` is stored as local time, which is ambiguous for an hour
+when daylight saving time ends, just like Laravel's own timestamps.
+
 ### Updating Activity
 
 - `$user->updateLastSeenAt()`: Writes `last_seen_at` if the user is tracked and the configured update threshold has
@@ -180,6 +183,13 @@ the container, so you can also inject the manager directly. The trait, the middl
 
 The package fires a `UserWasActiveEvent` whenever activity of a tracked user is detected. You can listen to this event
 for custom logic. Recording the activity never fires the event again.
+
+### Testing Your Application
+
+- Use `Event::fake([UserWasActiveEvent::class])` to assert that activity was detected without writing anything.
+- Disable tracking with `config(['last-seen.enabled' => false])` or `LastSeen::trackUsing(fn () => false)`.
+- When mocking the facade, use `LastSeen::partialMock()` or stub `shouldTrack()`. A `LastSeen::spy()` returns `false`
+  from `shouldTrack()`, so the middleware never calls `record()`.
 
 ### Manually Dispatching the Event
 

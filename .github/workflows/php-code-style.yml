@@ -9,6 +9,10 @@ jobs:
   php-code-styling:
     runs-on: ubuntu-latest
 
+    permissions:
+      # Allows the auto-commit step to push the style fixes.
+      contents: write
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v7

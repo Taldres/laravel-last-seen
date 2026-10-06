@@ -29,7 +29,10 @@ class LastSeenManager
         }
 
         $threshold = config()->integer('last-seen.update_threshold', LastSeenDefaultThreshold::Update->value);
-        $lastSeenAt = $user->getAttribute('last_seen_at');
+
+        $lastSeenAt = array_key_exists('last_seen_at', $user->getAttributes())
+            ? $user->getAttribute('last_seen_at')
+            : null;
 
         if ($lastSeenAt instanceof CarbonInterface && $lastSeenAt->diffInSeconds(now()) <= $threshold) {
             return false;

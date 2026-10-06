@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Taldres\LastSeen\Tests\Feature;
 
+use Illuminate\Database\Eloquent\MissingAttributeException;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 use Taldres\LastSeen\Facades\LastSeen;
 use Taldres\LastSeen\Tests\TestModels\User;
@@ -28,4 +30,19 @@ it('forgets the row the model was loaded from when its key was changed in memory
 
     expect(DB::table('users')->where('id', $user->getOriginal('id'))->value('last_seen_at'))->toBeNull()
         ->and($other->fresh()->last_seen_at)->not->toBeNull();
+});
+
+it('records a model loaded without last_seen_at in strict mode', function () {
+    $user = User::create(['email' => fake()->email()]);
+    $partial = fn () => User::query()->select(['id', 'email'])->findOrFail($user->id);
+
+    Model::preventAccessingMissingAttributes();
+
+    try {
+        expect(LastSeen::record($partial()))->toBeTrue()
+            ->and($user->fresh()->last_seen_at)->not->toBeNull()
+            ->and(fn () => $partial()->recentlySeen())->toThrow(MissingAttributeException::class);
+    } finally {
+        Model::preventAccessingMissingAttributes(false);
+    }
 });

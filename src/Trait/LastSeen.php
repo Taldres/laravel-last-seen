@@ -28,18 +28,23 @@ trait LastSeen
 
     public function updateLastSeenAt(): void
     {
-        if (! config('last-seen.enabled', true)) {
+        if (! $this->exists || ! config('last-seen.enabled', true)) {
             return;
         }
 
         $threshold = (int) config('last-seen.update_threshold', LastSeenDefaultThreshold::Update->value);
 
         if (! $this->last_seen_at || $this->last_seen_at->diffInSeconds(now()) > $threshold) {
-            $this->updateQuietly([
-                'last_seen_at' => now(),
-            ], [
-                'timestamps' => false,
-            ]);
+            $timestamp = $this->freshTimestamp();
+
+            // Write only last_seen_at through the base query builder, so updated_at, model events
+            // and other unsaved attributes stay untouched, then sync the in-memory model.
+            $this->newModelQuery()
+                ->whereKey($this->getKey())
+                ->toBase()
+                ->update(['last_seen_at' => $this->fromDateTime($timestamp)]);
+
+            $this->forceFill(['last_seen_at' => $timestamp])->syncOriginalAttribute('last_seen_at');
         }
     }
 

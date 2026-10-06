@@ -110,6 +110,12 @@ Each setting has a default value, so you only need to override them if you want 
 - `$user->recentlySeen()`: Returns `true` if the user was active within the configured threshold.
 - `User::onlyRecentlySeen()`: Query scope to get only users recently seen.
 
+### Updating Activity
+
+- `$user->updateLastSeenAt()`: Writes `last_seen_at` if the configured update threshold has passed. Only `last_seen_at` is
+  written: no model events are fired, the model's `updated_at` timestamp is left untouched and other unsaved changes on the
+  model are not persisted.
+
 ### Events
 
 The package fires a `UserWasActiveEvent` whenever user activity is detected. You can listen to this event for custom logic.

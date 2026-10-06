@@ -7,6 +7,7 @@ namespace Taldres\LastSeen\Tests\Feature;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
+use Taldres\LastSeen\Tests\TestModels\TimestampedUser;
 use Taldres\LastSeen\Tests\TestModels\User;
 
 it('checks if User model is an Eloquent Model class and implements Authenticatable contract', function () {
@@ -112,4 +113,29 @@ it('checks if updateLastSeenAt updates when threshold is exceeded', function () 
     $user->refresh();
 
     expect($user->last_seen_at->timestamp)->toBe(now()->timestamp);
+});
+
+it('checks if updateLastSeenAt does not touch the updated_at timestamp', function () {
+    $user = TimestampedUser::create(['email' => fake()->email()]);
+    $updatedAt = $user->updated_at;
+
+    $this->travel((int) config('last-seen.update_threshold') + 1)->seconds();
+
+    $user->updateLastSeenAt();
+    $user->refresh();
+
+    expect($user->last_seen_at)->not->toBeNull()
+        ->and($user->updated_at->timestamp)->toBe($updatedAt->timestamp);
+});
+
+it('checks if updateLastSeenAt does not persist other unsaved attributes', function () {
+    $user = TimestampedUser::create(['email' => $email = fake()->email()]);
+    $user->email = fake()->email();
+
+    $user->updateLastSeenAt();
+
+    expect($user->isDirty('last_seen_at'))->toBeFalse()
+        ->and($user->isDirty('email'))->toBeTrue()
+        ->and($user->fresh()->email)->toBe($email)
+        ->and($user->fresh()->last_seen_at)->not->toBeNull();
 });

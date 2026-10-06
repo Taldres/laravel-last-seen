@@ -80,3 +80,16 @@ it('calls the trackUsing callback only when a write is due', function () {
 
     expect($calls)->toBe(1);
 });
+
+it('replaces a last_seen_at in the future', function () {
+    $this->travelTo(Carbon::parse('2026-10-06 12:00:00'));
+
+    $loaded = User::forceCreate(['email' => fake()->email(), 'last_seen_at' => '2026-10-07 12:00:00'])->fresh();
+    $partial = User::query()->select(['id', 'email'])->findOrFail(
+        User::forceCreate(['email' => fake()->email(), 'last_seen_at' => '2026-10-07 12:00:00'])->id,
+    );
+
+    expect(LastSeen::record($loaded))->toBeTrue()
+        ->and($loaded->fresh()->last_seen_at->toDateTimeString())->toBe('2026-10-06 12:00:00')
+        ->and(LastSeen::record($partial))->toBeTrue();
+});

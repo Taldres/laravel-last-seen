@@ -34,7 +34,7 @@ class LastSeenManager
             ? $user->getAttribute('last_seen_at')
             : null;
 
-        if ($lastSeenAt instanceof CarbonInterface && $lastSeenAt->diffInSeconds(now()) < $threshold) {
+        if ($lastSeenAt instanceof CarbonInterface && ! $lastSeenAt->isFuture() && $lastSeenAt->diffInSeconds(now()) < $threshold) {
             return false;
         }
 
@@ -43,6 +43,7 @@ class LastSeenManager
         }
 
         $timestamp = $user->freshTimestamp();
+        $now = $user->fromDateTime($timestamp);
         $outdated = $user->fromDateTime($timestamp->copy()->subSeconds($threshold));
 
         // Write only last_seen_at through the base query builder, so updated_at, model events
@@ -53,8 +54,9 @@ class LastSeenManager
             ->toBase()
             ->where(fn (QueryBuilder $query) => $query
                 ->whereNull('last_seen_at')
-                ->orWhere('last_seen_at', '<=', $outdated))
-            ->update(['last_seen_at' => $user->fromDateTime($timestamp)]) > 0;
+                ->orWhere('last_seen_at', '<=', $outdated)
+                ->orWhere('last_seen_at', '>', $now))
+            ->update(['last_seen_at' => $now]) > 0;
 
         if ($written) {
             $user->forceFill(['last_seen_at' => $timestamp])->syncOriginalAttribute('last_seen_at');

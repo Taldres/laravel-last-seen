@@ -7,16 +7,19 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-class AddLastSeenAtToUsersTable extends Migration
+return new class extends Migration
 {
     public function up(): void
     {
         $tableName = $this->getTableName();
 
-        Schema::table($tableName, static function (Blueprint $table) use ($tableName) {
-            if (! Schema::hasColumn($tableName, 'last_seen_at')) {
-                $table->timestamp('last_seen_at')->nullable();
-            }
+        // down() drops the column, so never take over a column the application already owns.
+        if (Schema::hasColumn($tableName, 'last_seen_at')) {
+            throw new \RuntimeException("The [{$tableName}] table already has a last_seen_at column. Delete this migration if the column is managed by your application.");
+        }
+
+        Schema::table($tableName, static function (Blueprint $table) {
+            $table->timestamp('last_seen_at')->nullable()->index();
         });
     }
 
@@ -26,6 +29,10 @@ class AddLastSeenAtToUsersTable extends Migration
 
         Schema::table($tableName, static function (Blueprint $table) use ($tableName) {
             if (Schema::hasColumn($tableName, 'last_seen_at')) {
+                if (Schema::hasIndex($tableName, ['last_seen_at'])) {
+                    $table->dropIndex(['last_seen_at']);
+                }
+
                 $table->dropColumn('last_seen_at');
             }
         });
@@ -47,4 +54,4 @@ class AddLastSeenAtToUsersTable extends Migration
 
         return $userModel->getTable();
     }
-}
+};

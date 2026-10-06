@@ -1,0 +1,4 @@
+contact_links:
+  - name: Report a security vulnerability
+    url: https://github.com/Taldres/laravel-last-seen/security/advisories/new
+    about: Please report security vulnerabilities privately instead of opening a public issue.

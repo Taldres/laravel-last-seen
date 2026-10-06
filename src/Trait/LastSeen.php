@@ -7,7 +7,7 @@ namespace Taldres\LastSeen\Trait;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
-use Taldres\LastSeen\Enums\LastSeenDefaultThreshold;
+use Taldres\LastSeen\LastSeenManager;
 
 /**
  * @mixin Model
@@ -18,43 +18,39 @@ trait LastSeen
 {
     public function initializeLastSeen(): void
     {
-        if (! in_array('last_seen_at', $this->fillable, true)) {
-            $this->fillable[] = 'last_seen_at';
-        }
         if (! array_key_exists('last_seen_at', $this->casts)) {
             $this->casts['last_seen_at'] = 'datetime';
         }
     }
 
-    public function updateLastSeenAt(): void
+    /**
+     * Writes last_seen_at if tracking is allowed and the update threshold has passed.
+     * Returns whether the timestamp was written.
+     */
+    public function updateLastSeenAt(): bool
     {
-        if (! config('last-seen.enabled', true)) {
-            return;
-        }
+        return app(LastSeenManager::class)->record($this);
+    }
 
-        $threshold = (int) config('last-seen.update_threshold', LastSeenDefaultThreshold::Update->value);
-
-        if (! $this->last_seen_at || $this->last_seen_at->diffInSeconds(now()) > $threshold) {
-            $this->updateQuietly([
-                'last_seen_at' => now(),
-            ], [
-                'timestamps' => false,
-            ]);
-        }
+    /**
+     * Sets last_seen_at to null, without touching updated_at or other unsaved attributes.
+     */
+    public function forgetLastSeenAt(): void
+    {
+        app(LastSeenManager::class)->forget($this);
     }
 
     public function recentlySeen(): bool
     {
-        $threshold = (int) config('last-seen.recently_seen_threshold', LastSeenDefaultThreshold::RecentlySeen->value);
-
-        return $this->last_seen_at && $this->last_seen_at->diffInSeconds(now()) < $threshold;
+        return app(LastSeenManager::class)->recentlySeen($this);
     }
 
+    /**
+     * @param  Builder<static>  $builder
+     */
     public function scopeOnlyRecentlySeen(Builder $builder): void
     {
-        $threshold = (int) config('last-seen.recently_seen_threshold', LastSeenDefaultThreshold::RecentlySeen->value);
-
         $builder->whereNotNull('last_seen_at')
-            ->where('last_seen_at', '>=', now()->subSeconds($threshold));
+            ->where('last_seen_at', '>=', app(LastSeenManager::class)->recentlySeenSince());
     }
 }

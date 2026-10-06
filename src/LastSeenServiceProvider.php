@@ -21,6 +21,8 @@ class LastSeenServiceProvider extends ServiceProvider
 
     public function register(): void
     {
+        $this->app->singleton(LastSeenManager::class);
+
         $this->mergeConfigFrom(
             __DIR__.'/../config/last-seen.php',
             'last-seen'

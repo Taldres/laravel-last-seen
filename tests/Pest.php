@@ -1,7 +1,10 @@
 <?php
 
 declare(strict_types=1);
+
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Schema;
 use Taldres\LastSeen\Tests\TestCase;
 
 /*
@@ -17,4 +20,12 @@ use Taldres\LastSeen\Tests\TestCase;
 
 pest()->extend(TestCase::class)
     ->use(RefreshDatabase::class)
+    ->beforeEach(function () {
+        Schema::create('users', function (Blueprint $table) {
+            $table->id();
+            $table->string('email')->unique();
+            $table->timestamp('last_seen_at')->nullable();
+            $table->timestamps();
+        });
+    })
     ->in('Feature');

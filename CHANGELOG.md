@@ -2,6 +2,21 @@
 
 All notable changes to `laravel-last-seen` will be documented in this file
 
+## v1.2.0 - 2026-10-09
+
+<!-- Release notes generated using configuration in .github/release.yml at main -->
+### What's Changed
+
+#### Enhancements
+
+* feat(facade): add LastSeen::fake() for application tests by @Taldres in https://github.com/Taldres/laravel-last-seen/pull/18
+
+#### Other Changes
+
+* docs: replace the README banner with the new GitHub banner by @Taldres in https://github.com/Taldres/laravel-last-seen/pull/17
+
+**Full Changelog**: https://github.com/Taldres/laravel-last-seen/compare/v1.1.0...v1.2.0
+
 ## v1.1.0 - 2026-10-06
 
 <!-- Release notes generated using configuration in .github/release.yml at main -->

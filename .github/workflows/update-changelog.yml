@@ -13,8 +13,10 @@ jobs:
     timeout-minutes: 5
 
     permissions:
-      # Allows the job to push the updated changelog.
+      # Allows the job to push the changelog branch.
       contents: write
+      # Allows the job to open the changelog pull request.
+      pull-requests: write
 
     steps:
       - name: Checkout code
@@ -28,9 +30,29 @@ jobs:
           latest-version: ${{ github.event.release.tag_name }}
           release-notes: ${{ github.event.release.body }}
 
-      - name: Commit updated changelog
-        uses: stefanzweifel/git-auto-commit-action@4a55954c782fc1ea30b9056cd3e7a2b40ca8887d # v7.2.0
-        with:
-          branch: ${{ github.event.release.target_commitish }}
-          commit_message: "docs: update the changelog for ${{ github.event.release.tag_name }}"
-          file_pattern: CHANGELOG.md
+      # The release branch only accepts pull requests, so the changelog goes
+      # through one too.
+      - name: Open changelog pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.release.tag_name }}
+          BASE: ${{ github.event.release.target_commitish }}
+        run: |
+          if git diff --quiet -- CHANGELOG.md; then
+            exit 0
+          fi
+
+          branch="docs/changelog-${TAG//./-}"
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git switch --create "${branch}"
+          git commit --message "docs: update the changelog for ${TAG}" -- CHANGELOG.md
+          git push origin "${branch}"
+
+          gh pr create \
+            --base "${BASE}" \
+            --head "${branch}" \
+            --label skip-changelog \
+            --title "docs: update the changelog for ${TAG}" \
+            --body "Adds the release notes of ${TAG} to CHANGELOG.md."

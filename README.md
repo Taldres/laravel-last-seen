@@ -1,6 +1,4 @@
-<p align="center">
-    <img src="https://raw.githubusercontent.com/Taldres/laravel-last-seen/main/.github/assets/laravel-last-seen-social-preview.jpg" alt="Laravel Last Seen: user activity tracking for Laravel">
-</p>
+![Laravel Last Seen — track users' last activity in Laravel](.github/assets/github-banner.png)
 
 [![Packagist Version](https://img.shields.io/packagist/v/taldres/laravel-last-seen)](https://packagist.org/packages/taldres/laravel-last-seen)
 ![Tests](https://github.com/Taldres/laravel-last-seen/actions/workflows/tests.yml/badge.svg)

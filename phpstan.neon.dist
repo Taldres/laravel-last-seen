@@ -9,7 +9,7 @@ parameters:
         - database
         # Analyses the LastSeen trait in the context of a model that uses it.
         - tests/TestModels
-    level: 9
+    level: 10
     ignoreErrors:
         - '#^Class App\\Models\\User not found.#'
         -

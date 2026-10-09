@@ -1,4 +1,4 @@
-![Laravel Last Seen — track users' last activity in Laravel](.github/assets/github-banner.png)
+![Laravel Last Seen — track users' last activity in Laravel](.github/assets/laravel-last-seen.png)
 
 [![Packagist Version](https://img.shields.io/packagist/v/taldres/laravel-last-seen)](https://packagist.org/packages/taldres/laravel-last-seen)
 ![Tests](https://github.com/Taldres/laravel-last-seen/actions/workflows/tests.yml/badge.svg)

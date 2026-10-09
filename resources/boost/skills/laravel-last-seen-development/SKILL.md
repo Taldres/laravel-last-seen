@@ -1,6 +1,6 @@
 ---
 name: laravel-last-seen-development
-description: Track and query when users were last active with taldres/laravel-last-seen, including the last_seen_at column, recentlySeen(), the onlyRecentlySeen() scope, UpdateLastSeenMiddleware, the LastSeen facade and opting users out.
+description: Track and query when users were last active with taldres/laravel-last-seen, including the last_seen_at column, recentlySeen(), the onlyRecentlySeen() scope, UpdateLastSeenMiddleware, the LastSeen facade, faking it in tests and opting users out.
 ---
 
 # Laravel Last Seen Development
@@ -87,6 +87,10 @@ again. Exceptions from the guard, the `trackUsing()` callback and listeners are 
 ## Testing
 
 - Freeze or travel in time (`$this->travel(61)->seconds()`) to test the thresholds.
+- Use `LastSeen::fake()` to stop all writes and assert with `assertRecorded($user)`, `assertRecordedTimes($user, 2)`,
+  `assertNotRecorded($user)`, `assertNothingRecorded()`, `assertForgotten($user)`, `assertNotForgotten($user)` and
+  `assertNothingForgotten()`. Each takes a model or a `fn (Model $user): bool` callback. The fake keeps the config and
+  the `trackUsing()` callback but ignores the update threshold, so every `record()` call for a tracked user counts.
 - Use `Event::fake([UserWasActiveEvent::class])` to assert activity detection without writes.
 - Disable tracking with `config(['last-seen.enabled' => false])` or `LastSeen::trackUsing(fn () => false)`.
 - Mock the facade with `LastSeen::partialMock()` or stub `shouldTrack()`. With `LastSeen::spy()`, `shouldTrack()`

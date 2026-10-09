@@ -53,6 +53,10 @@ jobs:
           gh pr create \
             --base "${BASE}" \
             --head "${branch}" \
-            --label skip-changelog \
             --title "docs: update the changelog for ${TAG}" \
             --body "Adds the release notes of ${TAG} to CHANGELOG.md."
+
+          # The label only keeps this pull request out of the next release
+          # notes, so failing to set it must not fail the job.
+          gh pr edit "${branch}" --add-label skip-changelog \
+            || echo "::warning::Could not add the skip-changelog label to the changelog pull request."

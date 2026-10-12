@@ -109,7 +109,8 @@ php artisan vendor:publish --provider="Taldres\LastSeen\LastSeenServiceProvider"
 
 In the `config/last-seen.php` file, you can specify the User model:
 
-- `models.user`: The fully qualified class name of the User model. The migration uses it to find the users table.
+- `models.user`: The fully qualified class name of the User model. The migration uses it to find the users table. It
+  defaults to the `AUTH_MODEL` environment variable that Laravel's own auth configuration reads, or `App\Models\User`.
 
 All other settings—such as enabling/disabling the feature, update thresholds, and recently seen thresholds—can be controlled via environment variables in your `.env` file:
 

@@ -30,6 +30,17 @@ PHP 8.3 or higher
 
 Laravel 11 and PHP 8.2 are supported up to package version `0.4.x`.
 
+### Supported Databases
+
+The test suite runs against the same database versions as `laravel/framework`: SQLite, MySQL 5.7, 8.4 and 9.7,
+MariaDB 10.11, 11.8 and 12.3, PostgreSQL 10, 14 and 18, and SQL Server 2017, 2019, 2022 and 2025.
+
+SQL Server stores `last_seen_at` in a `datetime` column, which rounds to about 3 milliseconds. The thresholds are
+whole seconds, so a write can happen a few milliseconds early at most, which makes no difference in practice.
+
+A custom `$dateFormat` on your model that contains a timezone offset, such as ISO 8601 with `P`, only works where the
+database accepts it in a `datetime` column. MySQL before 8.0.19, MariaDB and SQL Server do not.
+
 ## Installation
 
 1. Install the package via Composer:

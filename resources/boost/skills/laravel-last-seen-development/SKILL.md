@@ -84,6 +84,16 @@ receives every model that uses the trait, so type-hint `Model` when more than on
 LastSeen::trackUsing(fn (User $user): bool => ! $user->hide_activity_status);
 ```
 
+The callback runs for every request of an authenticated user and once more when a write is due, so keep it free of
+queries. It also fits requests that are not the user's own activity, for example while someone impersonates the user:
+`fn (User $user): bool => ! session()->has('impersonator_id')`.
+
+## Several User Models
+
+The published migration only adds `last_seen_at` to the table of `models.user`. Add the column to the table of every
+other model that uses the trait with a migration of your own, and type-hint `Model` in the `trackUsing()` callback. The
+middleware records the user of the guard that is authenticated after the request, e.g. on routes with `auth:admin`.
+
 ## Events
 
 The middleware fires `Taldres\LastSeen\Events\UserWasActiveEvent` once per request for the user authenticated after the
@@ -112,3 +122,8 @@ again. Exceptions from the guard, the `trackUsing()` callback and listeners are 
 - Calling `LastSeen::trackUsing()` during a request: the callback stays active for later requests in Octane and queue
   workers.
 - Treating `last_seen_at` as exact: it can lag behind the latest request by up to the update threshold.
+- Setting the recently seen threshold below the update threshold: an active user then drops out of `onlyRecentlySeen()`
+  between two writes.
+- Running queries in the `trackUsing()` callback, which runs on every request.
+- Calling `recentlySeen()` on users loaded with `select()` without `last_seen_at`: it returns `false`, or throws in
+  strict mode.

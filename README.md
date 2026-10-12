@@ -38,20 +38,16 @@ Laravel 11 and PHP 8.2 are supported up to package version `0.4.x`.
     composer require taldres/laravel-last-seen
     ```
 
-2. Publish the migration and configuration files:
-    ```bash
-    php artisan vendor:publish --provider="Taldres\LastSeen\LastSeenServiceProvider"
-    ```
-   
-3. Clear the configuration cache to ensure the new settings are loaded:
+2. Publish the migration:
 
     ```bash
-    php artisan optimize:clear
-    # or
-    php artisan config:clear
+    php artisan vendor:publish --tag=last-seen-migrations
     ```
-   
-4. Run the migration to add the `last_seen_at` column to your users table:
+
+   The migration finds your users table through the `models.user` setting. You only need to publish the configuration
+   file to change it or other settings, see [Configuration](#configuration).
+
+3. Run the migration to add the `last_seen_at` column to your users table:
 
     ```bash
     php artisan migrate
@@ -59,8 +55,8 @@ Laravel 11 and PHP 8.2 are supported up to package version `0.4.x`.
 
    If your users table already has a `last_seen_at` column, the migration stops with an error instead of taking over a
    column it would drop on rollback. Delete the published migration in that case.
-   
-5. Add the `Taldres\LastSeen\Trait\LastSeen` trait to your User model:
+
+4. Add the `Taldres\LastSeen\Trait\LastSeen` trait to your User model:
 
     ```php
     use Taldres\LastSeen\Trait\LastSeen;
@@ -72,7 +68,7 @@ Laravel 11 and PHP 8.2 are supported up to package version `0.4.x`.
     }
     ```
    
-6. Add the middleware to your `web` or `api` middleware group in `bootstrap/app.php`, or to individual routes:
+5. Add the middleware to your `web` or `api` middleware group in `bootstrap/app.php`, or to individual routes:
 
     ```php
     // bootstrap/app.php
@@ -104,6 +100,8 @@ or this command to force overwrite the existing configuration file:
 ```bash
 php artisan vendor:publish --provider="Taldres\LastSeen\LastSeenServiceProvider" --tag="config" --force
 ```
+
+Run `php artisan config:clear` afterwards if your configuration is cached.
 
 ---
 
@@ -140,6 +138,11 @@ Each setting has a default value, so you only need to override them if you want 
   records each request once.
 - If resolving the user or recording fails, for example because of a database error or an exception in your
   `trackUsing()` callback or one of your listeners, the exception is reported and the response is returned unchanged.
+- The update threshold is checked in memory first, so a request within the threshold runs no query for the write. A due
+  write is a single `UPDATE` by primary key that only changes the row if the stored value is still older than the
+  threshold, which is why parallel requests write once.
+- The `trackUsing()` callback runs for every request of an authenticated user, and once more when a write is due. Keep it
+  free of queries, for example by reading an attribute of the user instead of loading a relation.
 
 ### Checking Activity
 
@@ -169,6 +172,31 @@ recorded activity replaces it.
 
 Keep `app.timezone` on UTC. With another timezone, `last_seen_at` is stored as local time, which is ambiguous for an hour
 when daylight saving time ends, just like Laravel's own timestamps.
+
+`last_seen_at` can lag behind the latest activity by up to `LAST_SEEN_UPDATE_THRESHOLD` seconds. Keep
+`LAST_SEEN_RECENTLY_SEEN_THRESHOLD` above it, otherwise an active user is not recently seen between two writes.
+
+`recentlySeen()` reads the `last_seen_at` attribute, so include it when you load users with `select()`. Without it the
+call returns `false`, or throws a `MissingAttributeException` when `Model::preventAccessingMissingAttributes()` is
+enabled, as it is by `Model::shouldBeStrict()`.
+
+### Showing Who Is Online
+
+```php
+$online = User::onlyRecentlySeen()->count();
+
+$users = User::onlyRecentlySeen()->latest('last_seen_at')->get();
+```
+
+```blade
+@if ($user->recentlySeen())
+    Online
+@else
+    Last seen {{ $user->last_seen_at?->diffForHumans() ?? 'never' }}
+@endif
+```
+
+Who may see this status is up to your application, see [Privacy](#privacy).
 
 ### Updating Activity
 
@@ -244,6 +272,22 @@ use Illuminate\Support\Facades\Event;
 Event::dispatch(new UserWasActiveEvent($user));
 ```
 
+### Several User Models
+
+The trait works on every Eloquent model with a `last_seen_at` column, but the published migration only adds the column to
+the table of `models.user`. For another model, for example an `Admin`, add the column with a migration of your own and use
+the trait on that model:
+
+```php
+Schema::table('admins', function (Blueprint $table) {
+    $table->timestamp('last_seen_at')->nullable()->index();
+});
+```
+
+The middleware records the user of the guard that is authenticated once the request has been handled, so put it on the
+routes that use `auth:admin`, or in the middleware group of the application. The `trackUsing()` callback receives every
+tracked model, so type-hint `Model` instead of a single class.
+
 ## AI Agents
 
 The package ships two [Laravel Boost](https://laravel.com/framework/docs/boost) skills for coding agents:
@@ -284,6 +328,14 @@ For users the callback rejects, the middleware fires no `UserWasActiveEvent` and
 `last_seen_at` untouched. The callback receives every model that uses the trait, so type-hint `Model` if more than one
 of your models does. Register it once while booting: it stays active for all later requests, also in Octane or queue
 workers.
+
+The callback also lets you skip requests that do not reflect the user's own activity. While a support agent
+impersonates a user, for example, their requests would otherwise keep the user "recently seen". Check whatever marks an
+impersonation in your application, such as a session key:
+
+```php
+LastSeen::trackUsing(fn (User $user): bool => ! session()->has('impersonator_id'));
+```
 
 ### Deleting the Timestamp
 

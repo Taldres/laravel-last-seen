@@ -327,6 +327,22 @@ it('calls the trackUsing callback once per request within the update threshold',
     expect($calls)->toBe(1);
 });
 
+it('calls the trackUsing callback once more when the request is due for a write', function () {
+    $calls = 0;
+    LastSeen::trackUsing(function () use (&$calls) {
+        $calls++;
+
+        return true;
+    });
+
+    $user = TimestampedUser::create(['email' => fake()->email()]);
+
+    $this->actingAs($user)->get('/last-seen')->assertOk();
+
+    expect($calls)->toBe(2)
+        ->and($user->fresh()->last_seen_at)->not->toBeNull();
+});
+
 describe('custom guards', function () {
     beforeEach(function () {
         $this->defaultGuard = config('auth.defaults.guard');

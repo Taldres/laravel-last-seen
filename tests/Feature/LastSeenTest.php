@@ -232,3 +232,23 @@ it('adds the datetime cast to subclasses and to models that use the trait throug
     'subclass' => SubclassedUser::class,
     'trait through another trait' => TraitComposedUser::class,
 ]);
+
+it('checks if recentlySeen returns false for a model loaded without last_seen_at', function () {
+    $user = User::forceCreate(['email' => fake()->email(), 'last_seen_at' => now()]);
+
+    $partial = User::query()->select(['id', 'email'])->findOrFail($user->id);
+
+    expect($partial->recentlySeen())->toBeFalse();
+});
+
+it('checks if an active user is not recently seen between two writes when the recently seen threshold is below the update threshold', function () {
+    config(['last-seen.update_threshold' => 60, 'last-seen.recently_seen_threshold' => 30]);
+    $user = User::create(['email' => fake()->email()]);
+
+    expect($user->updateLastSeenAt())->toBeTrue();
+
+    $this->travel(40)->seconds();
+
+    expect($user->updateLastSeenAt())->toBeFalse()
+        ->and($user->fresh()->recentlySeen())->toBeFalse();
+});

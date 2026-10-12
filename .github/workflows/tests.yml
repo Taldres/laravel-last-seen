@@ -134,44 +134,32 @@ jobs:
       - name: Run tests
         run: composer test:unit -- --ci
 
-  databases:
-    name: ${{ matrix.database }} - PHP 8.5 - Laravel 13
+  # The database versions are the ones laravel/framework tests against. On the weekly schedule the
+  # latest development releases join the matrix, like in the nightly databases workflow of the framework.
+  mysql:
+    name: MySQL ${{ matrix.version }} - PHP 8.5 - Laravel 13
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
-        include:
-          - database: MySQL 8.4
-            image: mysql:8.4
-            connection: mysql
-            port: 3306
-            health-cmd: mysqladmin ping -h 127.0.0.1
-          - database: PostgreSQL 18
-            image: postgres:18
-            connection: pgsql
-            port: 5432
-            health-cmd: pg_isready -h 127.0.0.1
+        version: ${{ fromJSON(github.event_name == 'schedule' && '["5.7", "8.4", "9.7", "innovation"]' || '["5.7", "8.4", "9.7"]') }}
 
     services:
-      database:
-        image: ${{ matrix.image }}
+      mysql:
+        image: mysql:${{ matrix.version }}
         env:
-          MYSQL_RANDOM_ROOT_PASSWORD: 'yes'
-          MYSQL_DATABASE: testing
-          MYSQL_USER: testing
-          MYSQL_PASSWORD: password
-          POSTGRES_DB: testing
-          POSTGRES_USER: testing
-          POSTGRES_PASSWORD: password
+          MYSQL_ALLOW_EMPTY_PASSWORD: 'yes'
+          MYSQL_DATABASE: laravel
         ports:
-          - ${{ matrix.port }}:${{ matrix.port }}
+          - 3306:3306
         options: >-
-          --health-cmd="${{ matrix.health-cmd }}"
-          --health-interval=5s
+          --health-cmd="mysqladmin ping -h 127.0.0.1"
+          --health-start-period=30s
+          --health-interval=10s
           --health-timeout=5s
-          --health-retries=20
+          --health-retries=3
 
     steps:
       - name: Checkout code
@@ -183,7 +171,7 @@ jobs:
         uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
         with:
           php-version: '8.5'
-          extensions: mbstring, pdo, pdo_mysql, pdo_pgsql, pdo_sqlite, sqlite, dom, fileinfo
+          extensions: mbstring, pdo, pdo_mysql, pdo_sqlite, sqlite, dom, fileinfo
           coverage: none
 
       - name: Install dependencies
@@ -195,9 +183,179 @@ jobs:
       - name: Run tests
         run: composer test:unit -- --ci
         env:
-          DB_CONNECTION: ${{ matrix.connection }}
+          DB_CONNECTION: mysql
           DB_HOST: 127.0.0.1
-          DB_PORT: ${{ matrix.port }}
-          DB_DATABASE: testing
-          DB_USERNAME: testing
+          DB_PORT: 3306
+          DB_DATABASE: laravel
+          DB_USERNAME: root
+          DB_PASSWORD: ''
+
+  mariadb:
+    name: MariaDB ${{ matrix.version }} - PHP 8.5 - Laravel 13
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # The development release may break for reasons outside of this package.
+    continue-on-error: ${{ matrix.version == 'verylatest' }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        version: ${{ fromJSON(github.event_name == 'schedule' && '["10.11", "11.8", "12.3", "verylatest"]' || '["10.11", "11.8", "12.3"]') }}
+
+    services:
+      mariadb:
+        image: ${{ matrix.version == 'verylatest' && 'quay.io/mariadb-foundation/mariadb-devel:verylatest' || format('mariadb:{0}', matrix.version) }}
+        env:
+          MARIADB_ALLOW_EMPTY_ROOT_PASSWORD: 'yes'
+          MARIADB_DATABASE: laravel
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
+        with:
+          php-version: '8.5'
+          extensions: mbstring, pdo, pdo_mysql, pdo_sqlite, sqlite, dom, fileinfo
+          coverage: none
+
+      - name: Install dependencies
+        run: |
+          composer require "laravel/framework:13.*" --no-interaction --no-update
+          composer require --dev "orchestra/testbench:11.*" --no-interaction --no-update
+          composer update --prefer-stable --prefer-dist --no-interaction --no-progress
+
+      - name: Run tests
+        run: composer test:unit -- --ci
+        env:
+          DB_CONNECTION: mariadb
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_DATABASE: laravel
+          DB_USERNAME: root
+          DB_PASSWORD: ''
+
+  postgres:
+    name: PostgreSQL ${{ matrix.version }} - PHP 8.5 - Laravel 13
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    strategy:
+      fail-fast: false
+      matrix:
+        version: ['10', '14', '18']
+
+    services:
+      postgres:
+        image: postgres:${{ matrix.version }}
+        env:
+          POSTGRES_DB: laravel
+          POSTGRES_USER: forge
+          POSTGRES_PASSWORD: password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -h 127.0.0.1"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
+        with:
+          php-version: '8.5'
+          extensions: mbstring, pdo, pdo_pgsql, pdo_sqlite, sqlite, dom, fileinfo
+          coverage: none
+
+      - name: Install dependencies
+        run: |
+          composer require "laravel/framework:13.*" --no-interaction --no-update
+          composer require --dev "orchestra/testbench:11.*" --no-interaction --no-update
+          composer update --prefer-stable --prefer-dist --no-interaction --no-progress
+
+      - name: Run tests
+        run: composer test:unit -- --ci
+        env:
+          DB_CONNECTION: pgsql
+          DB_HOST: 127.0.0.1
+          DB_PORT: 5432
+          DB_DATABASE: laravel
+          DB_USERNAME: forge
           DB_PASSWORD: password
+
+  sqlserver:
+    name: SQL Server ${{ matrix.version }} - PHP 8.5 - Laravel 13
+    # laravel/framework pins this runner as well: the newer images ship ODBC Driver 18, which the
+    # SQL Server service container does not work with.
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+
+    strategy:
+      fail-fast: false
+      matrix:
+        version: ['2017', '2019', '2022', '2025']
+
+    services:
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:${{ matrix.version }}-latest
+        env:
+          ACCEPT_EULA: 'Y'
+          SA_PASSWORD: Forge123
+        ports:
+          - 1433:1433
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
+        with:
+          php-version: '8.5'
+          extensions: mbstring, pdo, pdo_sqlite, sqlite, dom, fileinfo, sqlsrv, pdo_sqlsrv, odbc, pdo_odbc
+          coverage: none
+
+      - name: Install dependencies
+        run: |
+          composer require "laravel/framework:13.*" --no-interaction --no-update
+          composer require --dev "orchestra/testbench:11.*" --no-interaction --no-update
+          composer update --prefer-stable --prefer-dist --no-interaction --no-progress
+
+      - name: Wait for SQL Server
+        run: |
+          for _ in $(seq 1 30); do
+            if php -r 'new PDO("sqlsrv:Server=127.0.0.1,1433;TrustServerCertificate=1", "SA", "Forge123");' 2>/dev/null; then
+              exit 0
+            fi
+            sleep 2
+          done
+          echo 'SQL Server did not become ready.' >&2
+          exit 1
+
+      - name: Run tests
+        run: composer test:unit -- --ci
+        env:
+          DB_CONNECTION: sqlsrv
+          DB_HOST: 127.0.0.1
+          DB_PORT: 1433
+          DB_DATABASE: master
+          DB_USERNAME: SA
+          DB_PASSWORD: Forge123

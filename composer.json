@@ -1,7 +1,7 @@
 {
   "$schema": "https://getcomposer.org/schema.json",
   "name": "taldres/laravel-last-seen",
-  "description": "Track when users were last active in your Laravel application, with a middleware, query scope and facade.",
+  "description": "Track when users were last active in your Laravel application, with a middleware, query scopes and facade.",
   "keywords": [
     "laravel",
     "last-seen",

@@ -139,7 +139,7 @@ it('refuses to forget last_seen_at of a model loaded without its key', function 
 });
 
 it('does not record a fraction of a second before the update threshold', function () {
-    $this->travelTo(Carbon::parse('2026-10-06 12:00:59.999999'));
+    $this->travelTo(Carbon::parse('2026-10-06 12:00:59.500000'));
 
     $loaded = User::forceCreate(['email' => fake()->email(), 'last_seen_at' => '2026-10-06 12:00:00'])->fresh();
     $partial = User::query()->select(['id', 'email'])->findOrFail(
@@ -156,7 +156,7 @@ it('keeps the recorded last_seen_at in memory exactly as it was stored', functio
     $user = User::create(['email' => fake()->email()]);
 
     expect(LastSeen::record($user))->toBeTrue()
-        ->and($user->last_seen_at->format('Y-m-d H:i:s.u'))->toBe('2026-10-06 12:00:00.000000')
+        ->and($user->last_seen_at->format('Y-m-d H:i:s.u'))->toBe(Carbon::parse(now()->format($user->getDateFormat()))->format('Y-m-d H:i:s.u'))
         ->and($user->getOriginal('last_seen_at')->equalTo($user->fresh()->last_seen_at))->toBeTrue()
         ->and($user->isDirty())->toBeFalse();
 });

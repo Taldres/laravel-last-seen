@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Taldres\LastSeen\Tests\TestCase;
 
@@ -39,4 +40,19 @@ function createUnixTimestampUsersTable(): void
         $table->unsignedInteger('created_at')->nullable();
         $table->unsignedInteger('updated_at')->nullable();
     });
+}
+
+function skipUnlessDatabaseStoresDateOffsets(): void
+{
+    $connection = DB::connection();
+
+    $stores = match ($connection->getDriverName()) {
+        'mariadb', 'sqlsrv' => false,
+        'mysql' => version_compare((string) $connection->getPdo()->getAttribute(PDO::ATTR_SERVER_VERSION), '8.0.19', '>='),
+        default => true,
+    };
+
+    if (! $stores) {
+        test()->markTestSkipped('This database cannot store a date with a timezone offset in a datetime column.');
+    }
 }

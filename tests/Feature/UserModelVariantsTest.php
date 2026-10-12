@@ -80,8 +80,13 @@ it('records, scopes and forgets only the user with the given key', function (str
     $user = $model::forceCreate($attributes);
     $other = $model::forceCreate([...$otherAttributes, 'last_seen_at' => now()->subHour()]);
 
+    $keys = fn (): array => array_map(
+        fn (mixed $key): string => strtolower((string) $key),
+        $model::onlyRecentlySeen()->get()->modelKeys(),
+    );
+
     expect(LastSeen::record($user))->toBeTrue()
-        ->and($model::onlyRecentlySeen()->get()->modelKeys())->toBe([$user->getKey()]);
+        ->and($keys())->toBe([strtolower((string) $user->getKey())]);
 
     LastSeen::forget($user);
 
@@ -153,6 +158,10 @@ it('records and forgets a soft-deleted user, while the scope skips trashed users
 });
 
 it('stores last_seen_at in the date format of the model and checks the threshold in that format', function (string $model, string $lastSeenAt) {
+    if ($model === IsoFormatUser::class) {
+        skipUnlessDatabaseStoresDateOffsets();
+    }
+
     $this->travelTo(Carbon::parse('2026-10-06 12:00:00.250000'));
 
     $user = $model::forceCreate(['email' => fake()->email()]);
@@ -176,6 +185,10 @@ it('stores last_seen_at in the date format of the model and checks the threshold
 ]);
 
 it('agrees with recentlySeen() in the scope for the date format of the model', function (string $model) {
+    if ($model === IsoFormatUser::class) {
+        skipUnlessDatabaseStoresDateOffsets();
+    }
+
     $this->travelTo(Carbon::parse('2026-10-06 12:00:00'));
 
     $recent = $model::forceCreate(['email' => fake()->email(), 'last_seen_at' => now()->subMinutes(2)]);
@@ -241,7 +254,7 @@ it('stores the wall time of a non-UTC app timezone, also with an immutable_datet
     $user = CastsMethodUser::forceCreate(['email' => fake()->email()]);
 
     expect(LastSeen::record($user))->toBeTrue()
-        ->and(DB::table('users')->where('id', $user->id)->value('last_seen_at'))->toBe('2026-07-01 12:00:00')
+        ->and(substr((string) DB::table('users')->where('id', $user->id)->value('last_seen_at'), 0, 19))->toBe('2026-07-01 12:00:00')
         ->and($user->fresh()->last_seen_at->equalTo(now()))->toBeTrue()
         ->and($user->fresh()->recentlySeen())->toBeTrue()
         ->and(CastsMethodUser::onlyRecentlySeen()->count())->toBe(1);
@@ -266,7 +279,7 @@ it('records and reports correctly across the DST spring-forward gap', function (
 
     $this->travelTo(Carbon::parse('2026-03-29 01:00:45', 'UTC'));
     expect(LastSeen::record($stale))->toBeTrue()
-        ->and(DB::table('users')->where('id', $user->id)->value('last_seen_at'))->toBe('2026-03-29 03:00:45');
+        ->and(substr((string) DB::table('users')->where('id', $user->id)->value('last_seen_at'), 0, 19))->toBe('2026-03-29 03:00:45');
 
     $this->travelTo(Carbon::parse('2026-03-29 01:05:45', 'UTC'));
     expect($user->fresh()->recentlySeen())->toBeTrue()

@@ -154,6 +154,10 @@ it('does not change the moment passed to lastSeenBefore()', function () {
 });
 
 it('filters in the storage format of the model, like recentlySeen()', function (string $model, string $timezone) {
+    if ($model === IsoFormatUser::class) {
+        skipUnlessDatabaseStoresDateOffsets();
+    }
+
     date_default_timezone_set($timezone);
     $this->travelTo(Carbon::parse('2026-07-01 10:00:00', 'UTC'));
 

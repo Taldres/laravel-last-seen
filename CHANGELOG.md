@@ -2,6 +2,31 @@
 
 All notable changes to `laravel-last-seen` will be documented in this file
 
+## v1.3.0 - 2026-10-12
+
+<!-- Release notes generated using configuration in .github/release.yml at main -->
+### What's Changed
+
+#### Enhancements
+
+* feat(trait): add notRecentlySeen, neverSeen and lastSeenBefore scopes by @Taldres in https://github.com/Taldres/laravel-last-seen/pull/20
+* feat(config): default the user model to AUTH_MODEL by @Taldres in https://github.com/Taldres/laravel-last-seen/pull/21
+
+#### Documentation
+
+* docs: add usage recipes and pitfalls to the README and the skill by @Taldres in https://github.com/Taldres/laravel-last-seen/pull/22
+
+#### Maintenance
+
+* chore: ignore .claude and keep .env.example out of the dist archive by @Taldres in https://github.com/Taldres/laravel-last-seen/pull/23
+* ci: test against all database versions of laravel/framework by @Taldres in https://github.com/Taldres/laravel-last-seen/pull/24
+
+#### Other Changes
+
+* docs: use the new banner in the README by @Taldres in https://github.com/Taldres/laravel-last-seen/pull/19
+
+**Full Changelog**: https://github.com/Taldres/laravel-last-seen/compare/v1.2.0...v1.3.0
+
 ## v1.2.0 - 2026-10-09
 
 <!-- Release notes generated using configuration in .github/release.yml at main -->

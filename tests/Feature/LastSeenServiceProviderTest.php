@@ -77,6 +77,20 @@ it('merges the default configuration', function () {
     ]);
 });
 
+it('follows the AUTH_MODEL environment variable for the default user model', function () {
+    $defaults = fn (): array => require dirname(__DIR__, 2).'/config/last-seen.php';
+
+    try {
+        $_ENV['AUTH_MODEL'] = $_SERVER['AUTH_MODEL'] = 'App\\Models\\Member';
+
+        expect($defaults()['models']['user'])->toBe('App\\Models\\Member');
+    } finally {
+        unset($_ENV['AUTH_MODEL'], $_SERVER['AUTH_MODEL']);
+    }
+
+    expect($defaults()['models']['user'])->toBe('App\\Models\\User');
+});
+
 describe('publishing', function () {
     beforeEach(function () {
         $this->publishes = ServiceProvider::$publishes;

@@ -9,8 +9,9 @@ return [
     'models' => [
         /*
          * The fully qualified class name of the User model that will be used to track the last seen timestamp.
+         * Like Laravel's auth configuration, it follows the AUTH_MODEL environment variable.
          */
-        'user' => User::class,
+        'user' => env('AUTH_MODEL', User::class),
     ],
 
     /*

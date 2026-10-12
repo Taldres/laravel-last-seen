@@ -12,7 +12,7 @@ A simple Laravel package to track a user's last seen and recently seen status. T
 - Automatically update the `last_seen_at` timestamp for users
 - Middleware to detect user activity
 - Event-based architecture for extensibility
-- Query scopes and helper methods to check if a user was recently seen
+- Query scopes and helper methods to find users who were recently seen, never seen or last seen before a date
 - Configurable thresholds for updating and checking activity
 - Migration publishing for easy setup
 
@@ -144,6 +144,24 @@ Each setting has a default value, so you only need to override them if you want 
 
 - `$user->recentlySeen()`: Returns `true` if `last_seen_at` is at most `LAST_SEEN_RECENTLY_SEEN_THRESHOLD` seconds ago.
 - `User::onlyRecentlySeen()`: Query scope to get only recently seen users, using the same rule as `recentlySeen()`.
+- `User::notRecentlySeen()`: The exact opposite of `onlyRecentlySeen()`: everyone who is not recently seen, including
+  users who were never seen.
+- `User::neverSeen()`: Query scope for users whose `last_seen_at` is `null`.
+- `User::lastSeenBefore($moment)`: Query scope for users last seen before a date, for example
+  `User::lastSeenBefore(now()->subDays(30))`. Users who were never seen are not included, so combine it with
+  `neverSeen()` to find everyone who has been inactive for a while:
+
+    ```php
+    User::query()->where(fn ($query) => $query
+        ->neverSeen()
+        ->orWhere->lastSeenBefore(now()->subDays(30)));
+    ```
+
+All scopes compare in the date format and cast of your model, and `lastSeenBefore()` converts the moment to the
+application timezone first, so a `Carbon` instance in another timezone works as expected.
+
+A moment is compared in the precision of the stored column. With whole seconds, `lastSeenBefore(now())` therefore does
+not include a user who was recorded within the current second.
 
 A `last_seen_at` in the future, e.g. caused by clock drift between servers, counts as recently seen until the next
 recorded activity replaces it.

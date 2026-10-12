@@ -1,6 +1,6 @@
 ---
 name: laravel-last-seen-development
-description: Track and query when users were last active with taldres/laravel-last-seen, including the last_seen_at column, recentlySeen(), the onlyRecentlySeen() scope, UpdateLastSeenMiddleware, the LastSeen facade, faking it in tests and opting users out.
+description: Track and query when users were last active with taldres/laravel-last-seen, including the last_seen_at column, recentlySeen(), the onlyRecentlySeen(), notRecentlySeen(), neverSeen() and lastSeenBefore() scopes, UpdateLastSeenMiddleware, the LastSeen facade, faking it in tests and opting users out.
 ---
 
 # Laravel Last Seen Development
@@ -53,7 +53,13 @@ seen, default 300). Both thresholds must be integers of 0 or more, otherwise the
 $user->last_seen_at;                                // Carbon instance or null
 $user->recentlySeen();                              // seen within the recently seen threshold
 User::onlyRecentlySeen()->get();                    // same rule as a query scope, also inside joins
+User::notRecentlySeen()->get();                     // the exact opposite, including users who were never seen
+User::neverSeen()->get();                           // last_seen_at is null
+User::lastSeenBefore(now()->subDays(30))->get();    // last seen before a moment, without users who were never seen
 ```
+
+To find everyone inactive for a while, including users who were never seen, combine the scopes:
+`$query->neverSeen()->orWhere->lastSeenBefore(now()->subDays(30))` inside a `where(fn ($query) => ...)` group.
 
 ## Writing and Deleting Activity
 
@@ -100,8 +106,9 @@ again. Exceptions from the guard, the `trackUsing()` callback and listeners are 
 
 - Mass-assigning `last_seen_at`: it is not fillable. Use `LastSeen::record()` or `forceFill()`.
 - Calling `updateLastSeenAt()` in controllers when the middleware already runs on the route.
-- Comparing `last_seen_at` with a hand-written cutoff instead of `onlyRecentlySeen()`, which also respects the
-  model's date format and casts.
+- Comparing `last_seen_at` with a hand-written cutoff instead of `onlyRecentlySeen()`, `notRecentlySeen()` or
+  `lastSeenBefore()`, which also respect the model's date format and casts.
+- Negating `onlyRecentlySeen()` by hand with `whereNot`: use `notRecentlySeen()`.
 - Calling `LastSeen::trackUsing()` during a request: the callback stays active for later requests in Octane and queue
   workers.
 - Treating `last_seen_at` as exact: it can lag behind the latest request by up to the update threshold.

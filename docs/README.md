@@ -6,7 +6,8 @@
 
 ## Basic Usage
 
-- [How Activity Is Tracked](basic-usage/tracking-activity.md): what the middleware records and when it writes
+- [How Activity Is Tracked](basic-usage/tracking-activity.md): what the middleware records, when it writes, and long
+  transactions on the users table
 - [Checking Activity](basic-usage/checking-activity.md): `recentlySeen()`, the query scopes and showing recent activity
 - [Updating Activity](basic-usage/updating-activity.md): `updateLastSeenAt()` and `forgetLastSeenAt()`
 - [Facade](basic-usage/facade.md): the `LastSeen` facade and the manager behind it

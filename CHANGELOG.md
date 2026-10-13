@@ -2,6 +2,21 @@
 
 All notable changes to `laravel-last-seen` will be documented in this file
 
+## v1.5.0 - 2026-10-13
+
+<!-- Release notes generated using configuration in .github/release.yml at main -->
+### What's Changed
+
+#### Enhancements
+
+* feat(trait): add the lastSeenSince scope by @Taldres in https://github.com/Taldres/laravel-last-seen/pull/30
+
+#### Documentation
+
+* docs(readme): explain why to use the package by @Taldres in https://github.com/Taldres/laravel-last-seen/pull/29
+
+**Full Changelog**: https://github.com/Taldres/laravel-last-seen/compare/v1.4.0...v1.5.0
+
 ## v1.4.0 - 2026-10-13
 
 <!-- Release notes generated using configuration in .github/release.yml at main -->

@@ -2,6 +2,28 @@
 
 All notable changes to `laravel-last-seen` will be documented in this file
 
+## v1.4.0 - 2026-10-13
+
+<!-- Release notes generated using configuration in .github/release.yml at main -->
+### What's Changed
+
+#### Enhancements
+
+* feat(event): fire LastSeenRecordedEvent when last_seen_at is written by @Taldres in https://github.com/Taldres/laravel-last-seen/pull/25
+* feat(middleware): leave out requests with ignoreRequestsUsing() by @Taldres in https://github.com/Taldres/laravel-last-seen/pull/28
+
+#### Documentation
+
+* docs: describe what the package measures and drop the online wording by @Taldres in https://github.com/Taldres/laravel-last-seen/pull/27
+
+#### Behaviour to know about
+
+- A test that fully mocks the facade (`LastSeen::shouldReceive('shouldTrack')`) and sends a request through the middleware has to stub `shouldIgnoreRequest()` as well, or use `LastSeen::partialMock()` or `LastSeen::spy()`. The middleware reports the missing method, so the symptom is a `shouldTrack()` or `record()` expectation that was never met.
+- `record()` and `updateLastSeenAt()` now fire a `LastSeenRecordedEvent`. With a full `Event::fake()`, `Event::assertNothingDispatched()` fails after a direct `$user->updateLastSeenAt()`. Fake only the events you assert on, or use `LastSeen::fake()`.
+- `record()` now reads `recently_seen_threshold` before it writes, so an invalid value (for example a negative `LAST_SEEN_RECENTLY_SEEN_THRESHOLD`) stops the writes instead of only the reads.
+
+**Full Changelog**: https://github.com/Taldres/laravel-last-seen/compare/v1.3.0...v1.4.0
+
 ## v1.3.0 - 2026-10-12
 
 <!-- Release notes generated using configuration in .github/release.yml at main -->

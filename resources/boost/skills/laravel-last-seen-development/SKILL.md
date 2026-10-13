@@ -194,5 +194,8 @@ deduplicate with `Cache::add("...:{$event->user->getKey()}:{$event->recordedAt->
 - Ignoring Livewire's update route or `X-Livewire` header to stop polling: it also carries real user actions.
 - Ignoring Inertia prefetch requests (`Purpose: prefetch`): the later visit is served from the prefetch cache.
 - Doing heavy work in a `UserWasActiveEvent` listener, which runs on every request: use `LastSeenRecordedEvent`.
+- Long transactions that read first and later write the users row: on MariaDB 11.6+ (`innodb_snapshot_isolation` on)
+  they fail with error 1020 when `last_seen_at` was written in between. Use `DB::transaction(..., attempts: 3)`, a short
+  transaction for the users write, or `READ COMMITTED`; `lockForUpdate()` first makes requests of that user wait.
 - Calling `recentlySeen()` on users loaded with `select()` without `last_seen_at`: it returns `false`, or throws in
   strict mode.

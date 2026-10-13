@@ -2,6 +2,27 @@
 
 All notable changes to `laravel-last-seen` will be documented in this file
 
+## v1.6.1 - 2026-10-13
+
+<!-- Release notes generated using configuration in .github/release.yml at main -->
+### What's Changed
+
+#### Bug Fixes
+
+* fix: reject invalid .env thresholds, keep newer parallel writes, carry the written user by @Taldres in https://github.com/Taldres/laravel-last-seen/pull/36
+
+#### Documentation
+
+* docs: explain conflicts with long transactions on the users table by @Taldres in https://github.com/Taldres/laravel-last-seen/pull/37
+
+#### Behaviour to know about
+
+- An invalid `LAST_SEEN_UPDATE_THRESHOLD` or `LAST_SEEN_RECENTLY_SEEN_THRESHOLD` in `.env`, for example `banana`, now throws an `InvalidArgumentException` instead of being read as `0`. An entry without a value now falls back to the default instead of `0`.
+- A configuration file published before 1.6.1 still casts the `.env` values with `(int)` and keeps the old behaviour. Publish it again with `php artisan vendor:publish --tag=last-seen-config --force`, or replace the two threshold lines as shown in [Configuration](https://github.com/Taldres/laravel-last-seen/blob/main/docs/configuration.md).
+- A `last_seen_at` in the future is only replaced by a model that read that value. A model loaded without `last_seen_at` writes again once the future value has passed.
+
+**Full Changelog**: https://github.com/Taldres/laravel-last-seen/compare/v1.6.0...v1.6.1
+
 ## v1.6.0 - 2026-10-13
 
 <!-- Release notes generated using configuration in .github/release.yml at main -->

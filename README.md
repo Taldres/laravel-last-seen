@@ -16,6 +16,16 @@ A simple Laravel package to track a user's last seen and recently seen status. T
 - Configurable thresholds for updating and checking activity
 - Migration publishing for easy setup
 
+## What It Measures
+
+The package records the time of a user's last request. From that it tells you when a user was **last seen** and
+whether they were **recently seen**, meaning within `LAST_SEEN_RECENTLY_SEEN_THRESHOLD` seconds.
+
+It does not tell you whether a user is present right now. A user who closed the browser tab still counts as recently
+seen until the threshold has passed, and a user who reads a page for ten minutes without sending a request does not.
+For live presence, such as a list of who is viewing a page, use
+[presence channels](https://laravel.com/docs/broadcasting#presence-channels).
+
 ## Requirements
 
 ### PHP
@@ -191,17 +201,17 @@ when daylight saving time ends, just like Laravel's own timestamps.
 call returns `false`, or throws a `MissingAttributeException` when `Model::preventAccessingMissingAttributes()` is
 enabled, as it is by `Model::shouldBeStrict()`.
 
-### Showing Who Is Online
+### Showing Recent Activity
 
 ```php
-$online = User::onlyRecentlySeen()->count();
+$recentlyActive = User::onlyRecentlySeen()->count();
 
 $users = User::onlyRecentlySeen()->latest('last_seen_at')->get();
 ```
 
 ```blade
 @if ($user->recentlySeen())
-    Online
+    Recently active
 @else
     Last seen {{ $user->last_seen_at?->diffForHumans() ?? 'never' }}
 @endif

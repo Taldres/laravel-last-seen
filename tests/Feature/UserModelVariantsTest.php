@@ -7,7 +7,9 @@ namespace Taldres\LastSeen\Tests\Feature;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Schema;
+use Taldres\LastSeen\Events\LastSeenRecordedEvent;
 use Taldres\LastSeen\Facades\LastSeen;
 use Taldres\LastSeen\Tests\TestModels\CastsMethodUser;
 use Taldres\LastSeen\Tests\TestModels\CustomKeyMember;
@@ -227,6 +229,20 @@ it('records every new microsecond with an update threshold of 0 when microsecond
 
     expect(LastSeen::record($user))->toBeTrue()
         ->and($user->fresh()->last_seen_at->format('Y-m-d H:i:s.u'))->toBe('2026-10-06 12:00:00.250001');
+});
+
+it('keeps the microseconds in the written value of the event when microseconds are stored', function () {
+    $this->travelTo(Carbon::parse('2026-10-06 12:00:00.250000'));
+    $recorded = null;
+    Event::listen(LastSeenRecordedEvent::class, function (LastSeenRecordedEvent $event) use (&$recorded) {
+        $recorded = $event;
+    });
+
+    $user = MicrosecondUser::forceCreate(['email' => fake()->email()]);
+    LastSeen::record($user);
+
+    expect($recorded?->recordedAt->format('Y-m-d H:i:s.u'))->toBe('2026-10-06 12:00:00.250000')
+        ->and($recorded?->recordedAt->eq($user->fresh()->last_seen_at))->toBeTrue();
 });
 
 it('never touches the timestamp columns of the model', function (string $model, string $table, array $columns) {

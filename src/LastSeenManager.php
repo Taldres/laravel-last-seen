@@ -6,10 +6,12 @@ namespace Taldres\LastSeen;
 
 use Carbon\CarbonInterface;
 use Closure;
+use DateTimeInterface;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\Event;
 use InvalidArgumentException;
 use LogicException;
@@ -77,10 +79,25 @@ class LastSeenManager
         if ($written) {
             $user->forceFill(['last_seen_at' => $timestamp])->syncOriginalAttribute('last_seen_at');
 
-            Event::dispatch(new LastSeenRecordedEvent($user, $previous, $becameRecentlySeen));
+            Event::dispatch(new LastSeenRecordedEvent($user, $previous, $becameRecentlySeen, $this->recordedAt($user, $now, $timestamp)));
         }
 
         return $written;
+    }
+
+    /**
+     * The written value as a freshly loaded model reads it, so it has the precision of the stored value. The model
+     * itself can still hold the unformatted timestamp, because Eloquent caches the object a class cast was given.
+     */
+    private function recordedAt(Model $user, mixed $stored, CarbonInterface $timestamp): CarbonInterface
+    {
+        $value = $user->newInstance()->setRawAttributes(['last_seen_at' => $stored])->getAttribute('last_seen_at');
+
+        return match (true) {
+            $value instanceof CarbonInterface => $value,
+            $value instanceof DateTimeInterface => Date::instance($value),
+            default => $timestamp->copy(),
+        };
     }
 
     /**

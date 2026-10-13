@@ -360,7 +360,8 @@ Event::listen(function (LastSeenRecordedEvent $event) {
 });
 ```
 
-The event carries the `$user`, the `$previousLastSeenAt` the model held before the write and `$becameRecentlySeen`.
+The event carries the `$user`, the `$previousLastSeenAt` the model held before the write, the `$recordedAt` value that
+was written and `$becameRecentlySeen`.
 `$becameRecentlySeen` is `true` when the user was not recently seen before the write, so `recentlySeen()` was `false`
 and is `true` now. That includes users who were never seen and models that were just created. It says nothing about
 whether the user is present right now, only that a new stretch of activity began. A previous value that cannot be read
@@ -369,11 +370,11 @@ instance. It is reported as `null` with `$becameRecentlySeen` set to `false`, so
 it did not observe. A previous value in the future does not count. With a recently seen threshold below the update
 threshold the flag is `true` for almost every write, because the previous value is always older than that threshold.
 
-Both values come from the model instance, not from the database, so they are only as fresh as that instance. They can
-be wrong when the instance is stale: a user that your application serves from a cache, parallel requests with an update
-threshold of `0`, `forgetLastSeenAt()` running at the same time as a request, or a retry on the same instance after a
-write was rolled back. Treat `$becameRecentlySeen` as a hint and make listeners idempotent, for example by deduplicating
-notifications.
+The previous value and the flag come from the model instance, not from the database, so they are only as fresh as that
+instance. They can be wrong when the instance is stale: a user that your application serves from a cache, parallel
+requests with an update threshold of `0`, `forgetLastSeenAt()` running at the same time as a request, or a retry on the
+same instance after a write was rolled back. Treat `$becameRecentlySeen` as a hint and make listeners idempotent, for
+example by deduplicating notifications.
 
 - The user is already updated when the listener runs. A listener must not record the same user again: with an update
   threshold of `0` and a column that stores fractions of a second that recurses.
@@ -394,8 +395,13 @@ notifications.
     }
     ```
 
-- Queued listeners store the user's key and `previousLastSeenAt` in the queue, see [Privacy](#privacy). If a listener
-  logs the event, it creates the activity history that the package avoids by itself.
+- `$recordedAt` holds the written value as a freshly loaded model reads it, in the precision of the stored value, so it
+  compares equal to `last_seen_at` of the reloaded user until the next write. A queued listener reloads the user, whose
+  `last_seen_at` may have moved on by then, while `$recordedAt` stays the value of this write. Together with the user's
+  key it identifies the write, for example to deduplicate notifications. When you create the event yourself without it,
+  it is the current time.
+- Queued listeners store the user's key, `previousLastSeenAt` and `recordedAt` in the queue, see [Privacy](#privacy). If
+  a listener logs the event, it creates the activity history that the package avoids by itself.
 - There is no event for users who stop being recently seen: nothing happens in the application when they stop sending
   requests. Use a scheduled job and the `notRecentlySeen()` scope for that.
 
@@ -480,8 +486,9 @@ keeps the data small and under your control:
   activity history, and no IP address or user agent is stored.
 - It does not send any data to external services.
 - Who may see another user's activity status is up to your application, for example through policies.
-- Listeners of the `LastSeenRecordedEvent` receive the user and the previous `last_seen_at`. What they do with it, such
-  as logging it or queueing it, is up to your application, see [Deleting the Timestamp](#deleting-the-timestamp).
+- Listeners of the `LastSeenRecordedEvent` receive the user, the previous and the written `last_seen_at`. What they do
+  with it, such as logging it or queueing it, is up to your application, see
+  [Deleting the Timestamp](#deleting-the-timestamp).
 
 ### Opting Users Out
 
@@ -517,10 +524,11 @@ LastSeen::trackUsing(fn (User $user): bool => ! session()->has('impersonator_id'
   writes it again. It throws a `LogicException` for a model that was loaded without its primary key.
 - When a user is deleted, `last_seen_at` is deleted with the row.
 - `LAST_SEEN_ENABLED=false` only stops new writes. It does not delete stored values.
-- A queued listener of the `LastSeenRecordedEvent` copies the user's key and `previousLastSeenAt` into the `jobs` table,
-  and into `failed_jobs` when it fails. Neither `forgetLastSeenAt()` nor deleting the user removes those copies. Add
-  `public $deleteWhenMissingModels = true;` to the listener so jobs for deleted users are dropped instead of failing,
-  and prune failed jobs. Tools that record events, such as Telescope's event watcher, store the payload as well.
+- A queued listener of the `LastSeenRecordedEvent` copies the user's key, `previousLastSeenAt` and `recordedAt` into the
+  `jobs` table, and into `failed_jobs` when it fails. Neither `forgetLastSeenAt()` nor deleting the user removes those
+  copies. Add `public $deleteWhenMissingModels = true;` to the listener so jobs for deleted users are dropped instead of
+  failing, and prune failed jobs. Tools that record events, such as Telescope's event watcher, store the payload as
+  well.
 
 ## Upgrading
 

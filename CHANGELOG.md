@@ -2,6 +2,23 @@
 
 All notable changes to `laravel-last-seen` will be documented in this file
 
+## v1.6.0 - 2026-10-13
+
+<!-- Release notes generated using configuration in .github/release.yml at main -->
+### What's Changed
+
+#### Enhancements
+
+* feat(event): add the written timestamp to LastSeenRecordedEvent by @Taldres in https://github.com/Taldres/laravel-last-seen/pull/32
+* feat: show the package setup in php artisan about by @Taldres in https://github.com/Taldres/laravel-last-seen/pull/35
+
+#### Documentation
+
+* docs: move the detailed documentation into docs/ by @Taldres in https://github.com/Taldres/laravel-last-seen/pull/33
+* docs: add recipes for inactive and returning users by @Taldres in https://github.com/Taldres/laravel-last-seen/pull/34
+
+**Full Changelog**: https://github.com/Taldres/laravel-last-seen/compare/v1.5.0...v1.6.0
+
 ## v1.5.0 - 2026-10-13
 
 <!-- Release notes generated using configuration in .github/release.yml at main -->

@@ -30,3 +30,21 @@ All other settings—such as enabling/disabling the feature, update thresholds, 
 Both thresholds must be integers of 0 or more. Other values throw an `InvalidArgumentException`.
 
 Each setting has a default value, so you only need to override them if you want to change the default behavior.
+
+## Checking the Configuration
+
+`php artisan about --only=last_seen` shows the settings the package runs with: the package version, whether it is
+enabled, the user model, whether that model uses the `LastSeen` trait, and both thresholds. It marks these problems:
+
+- `MISSING`: the user model does not use the trait, so the middleware records nothing for it. Only the model in
+  `models.user` is checked. If you track other models instead, see
+  [Several User Models](advanced-usage/several-user-models.md).
+- `MODEL NOT FOUND`: `models.user` does not name a class that can be loaded.
+- `NOT A CLASS NAME`: `models.user` is not a string.
+- `INVALID`: a threshold is not an integer of 0 or more, so recording throws an `InvalidArgumentException`.
+- `not above the update threshold`: `last_seen_at` can lag behind the latest activity by up to the update threshold, so
+  an active user can drop out of "recently seen" between two writes, see
+  [Checking Activity](basic-usage/checking-activity.md).
+
+Add `--json` for output a script can read. It holds the raw configuration values, and `user_model_trait` is `true`,
+`false`, or `null` when the model cannot be loaded.

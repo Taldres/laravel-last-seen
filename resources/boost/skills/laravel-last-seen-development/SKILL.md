@@ -126,20 +126,23 @@ request, so logout requests are not recorded. Recording activity never fires it 
 `Taldres\LastSeen\Events\LastSeenRecordedEvent` fires whenever `last_seen_at` was actually written (middleware,
 `updateLastSeenAt()` or `LastSeen::record()`), about once per user and update threshold. Use it instead of
 `UserWasActiveEvent` for work that must not run on every request. It carries `$user` (already updated),
-`$previousLastSeenAt` and `$becameRecentlySeen`: `recentlySeen()` was false before this write and is true now, which
-includes never seen and just created models. That is not a presence signal, it only marks the start of a new stretch
-of activity. An unreadable previous value (model loaded without the column, or a cast that returns no `Carbon`) gives
-`null` and `false`; a future value gives `false`. Both values come from the model instance, so a cached user, parallel
-requests with an update threshold of 0, a concurrent `forgetLastSeenAt()` or a retry after a rollback can make them
-wrong: treat `becameRecentlySeen` as a hint and make listeners idempotent.
+`$previousLastSeenAt`, `$recordedAt` and `$becameRecentlySeen`. `$recordedAt` is the written value as a freshly loaded
+model reads it, so it equals the stored `last_seen_at` until the next write and stays fixed when a queued listener
+reloads a user who was seen again since; use it with the user key to deduplicate. Created by hand without it, it is the
+current time. `$becameRecentlySeen` means `recentlySeen()` was false before this write and is true now, which includes
+never seen and just created models. That is not a presence signal, it only marks the start of a new stretch of activity.
+An unreadable previous value (model loaded without the column, or a cast that returns no `Carbon`) gives `null` and
+`false`; a future value gives `false`. The previous value and the flag come from the model instance, so a cached user,
+parallel requests with an update threshold of 0, a concurrent `forgetLastSeenAt()` or a retry after a rollback can make
+them wrong: treat `becameRecentlySeen` as a hint and make listeners idempotent.
 
 The event implements `ShouldDispatchAfterCommit`, so a rolled back write fires nothing (with several connections an
 unrelated rollback can drop it). A listener that throws makes `record()` throw after the write, but inside an open
 transaction the listener runs at commit, so the exception comes out of the commit, can skip later `DB::afterCommit()`
 callbacks and is not caught by the middleware. Prefer queued listeners, and queue only on `becameRecentlySeen` with
 `shouldQueue(LastSeenRecordedEvent $event): bool`. A listener must not record the same user again. Queued listeners copy
-the user key and `previousLastSeenAt` into `jobs` and `failed_jobs`, which `forgetLastSeenAt()` does not remove: set
-`$deleteWhenMissingModels = true` on them. There is no event for users who stop being recently seen.
+the user key, `previousLastSeenAt` and `recordedAt` into `jobs` and `failed_jobs`, which `forgetLastSeenAt()` does not
+remove: set `$deleteWhenMissingModels = true` on them. There is no event for users who stop being recently seen.
 
 ## Testing
 

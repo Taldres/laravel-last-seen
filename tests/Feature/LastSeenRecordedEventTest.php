@@ -17,9 +17,11 @@ use Taldres\LastSeen\Events\LastSeenRecordedEvent;
 use Taldres\LastSeen\Events\UserWasActiveEvent;
 use Taldres\LastSeen\Facades\LastSeen;
 use Taldres\LastSeen\Middleware\UpdateLastSeenMiddleware;
+use Taldres\LastSeen\Tests\TestModels\FormattedLastSeenUser;
 use Taldres\LastSeen\Tests\TestModels\PlainDateUser;
 use Taldres\LastSeen\Tests\TestModels\QueuedRecordedListener;
 use Taldres\LastSeen\Tests\TestModels\User;
+use Taldres\LastSeen\Tests\TestModels\UtcStoredUser;
 
 beforeEach(function () {
     Route::get('/last-seen', fn () => 'ok')->middleware(UpdateLastSeenMiddleware::class);
@@ -185,6 +187,80 @@ it('marks every write as becoming recently seen when the recently seen threshold
     expect($becameRecentlySeen)->toBe([true, true]);
 });
 
+it('reports a written value that equals the stored timestamp', function () {
+    $this->travelTo(Carbon::parse('2026-10-06 12:00:00.750000'));
+    $recorded = null;
+    Event::listen(LastSeenRecordedEvent::class, function (LastSeenRecordedEvent $event) use (&$recorded) {
+        $recorded = $event;
+    });
+
+    $user = User::create(['email' => fake()->email()]);
+    LastSeen::record($user);
+
+    expect($recorded->recordedAt->format('Y-m-d H:i:s.u'))->toBe('2026-10-06 12:00:00.000000')
+        ->and($recorded->recordedAt->eq($user->last_seen_at))->toBeTrue()
+        ->and($recorded->recordedAt->eq($user->fresh()->last_seen_at))->toBeTrue();
+});
+
+it('reports the stored value as the written value for a custom cast', function (string $model) {
+    $this->travelTo(Carbon::parse('2026-10-06 12:00:00.750000'));
+    $recorded = null;
+    Event::listen(LastSeenRecordedEvent::class, function (LastSeenRecordedEvent $event) use (&$recorded) {
+        $recorded = $event;
+    });
+
+    $user = $model::forceCreate(['email' => fake()->email(), 'last_seen_at' => Carbon::parse('2026-10-06 11:00:00')])->fresh();
+    LastSeen::record($user);
+
+    expect($recorded->recordedAt->format('Y-m-d H:i:s.u'))->toBe('2026-10-06 12:00:00.000000')
+        ->and($recorded->recordedAt->eq($user->fresh()->last_seen_at))->toBeTrue();
+})->with([
+    'cast returning CarbonImmutable' => [UtcStoredUser::class],
+    'cast returning DateTimeImmutable' => [PlainDateUser::class],
+]);
+
+it('reports the timestamp as the written value when an accessor returns no date', function () {
+    $this->travelTo(Carbon::parse('2026-10-06 12:00:00.750000'));
+    $recorded = null;
+    Event::listen(LastSeenRecordedEvent::class, function (LastSeenRecordedEvent $event) use (&$recorded) {
+        $recorded = $event;
+    });
+
+    $user = FormattedLastSeenUser::forceCreate(['email' => fake()->email()]);
+    LastSeen::record($user);
+
+    expect($recorded->recordedAt->format('Y-m-d H:i:s.u'))->toBe('2026-10-06 12:00:00.750000');
+});
+
+it('keeps the written value when a queued listener reloads a user who was seen again', function () {
+    $this->travelTo(Carbon::parse('2026-10-06 12:00:00'));
+    $events = [];
+    Event::listen(LastSeenRecordedEvent::class, function (LastSeenRecordedEvent $event) use (&$events) {
+        $events[] = $event;
+    });
+
+    $user = User::create(['email' => fake()->email()]);
+    LastSeen::record($user);
+    $serialized = serialize($events[0]);
+
+    $this->travel(2)->minutes();
+    LastSeen::record($user);
+
+    $restored = unserialize($serialized);
+
+    expect($restored->user->last_seen_at?->toDateTimeString())->toBe('2026-10-06 12:02:00')
+        ->and($restored->recordedAt->toDateTimeString())->toBe('2026-10-06 12:00:00');
+});
+
+it('uses the current time as the written value when the event is created without one', function () {
+    $this->travelTo(Carbon::parse('2026-10-06 12:00:00'));
+    $user = User::create(['email' => fake()->email()]);
+
+    expect((new LastSeenRecordedEvent($user, null, true))->recordedAt->toDateTimeString())->toBe('2026-10-06 12:00:00')
+        ->and((new LastSeenRecordedEvent($user, null, true, Carbon::parse('2026-10-06 11:00:00')))->recordedAt->toDateTimeString())
+        ->toBe('2026-10-06 11:00:00');
+});
+
 it('hands the listener the model that was just recorded', function () {
     $this->travelTo(Carbon::parse('2026-10-06 12:00:00'));
     $user = User::create(['email' => fake()->email()]);
@@ -293,14 +369,15 @@ it('queues a listener only when the user became recently seen', function () {
     }
 });
 
-it('keeps the previous value when the event is serialized', function () {
+it('keeps the previous and the written value when the event is serialized', function () {
     $user = User::forceCreate(['email' => fake()->email(), 'last_seen_at' => '2026-10-06 11:00:00']);
 
-    $restored = unserialize(serialize(new LastSeenRecordedEvent($user, Carbon::parse('2026-10-06 11:00:00'), true)));
+    $restored = unserialize(serialize(new LastSeenRecordedEvent($user, Carbon::parse('2026-10-06 11:00:00'), true, Carbon::parse('2026-10-06 12:00:00'))));
 
     expect($restored->user->is($user))->toBeTrue()
         ->and($restored->previousLastSeenAt?->toDateTimeString())->toBe('2026-10-06 11:00:00')
-        ->and($restored->becameRecentlySeen)->toBeTrue();
+        ->and($restored->becameRecentlySeen)->toBeTrue()
+        ->and($restored->recordedAt->toDateTimeString())->toBe('2026-10-06 12:00:00');
 });
 
 it('fires the event while the write still happens under Event::fake()', function () {

@@ -21,7 +21,9 @@ use Taldres\LastSeen\Tests\TestModels\SecondaryConnectionUser;
 use Taldres\LastSeen\Tests\TestModels\SoftDeletingUser;
 use Taldres\LastSeen\Tests\TestModels\StringKeyUser;
 use Taldres\LastSeen\Tests\TestModels\UlidUser;
+use Taldres\LastSeen\Tests\TestModels\UnixTimestampUser;
 use Taldres\LastSeen\Tests\TestModels\User;
+use Taldres\LastSeen\Tests\TestModels\UtcStoredUser;
 use Taldres\LastSeen\Tests\TestModels\UuidUser;
 
 beforeEach(function () {
@@ -184,6 +186,33 @@ it('stores last_seen_at in the date format of the model and checks the threshold
 })->with([
     'microseconds' => [MicrosecondUser::class, '2026-10-06 12:00:00.250000'],
     'ISO 8601' => [IsoFormatUser::class, '2026-10-06 12:00:00.000000'],
+]);
+
+it('replaces a future last_seen_at it read, but not a newer one, in the date format of the model', function (string $model) {
+    if ($model === IsoFormatUser::class) {
+        skipUnlessDatabaseStoresDateOffsets();
+    }
+
+    if ($model === UnixTimestampUser::class) {
+        createUnixTimestampUsersTable();
+    }
+
+    $this->travelTo(Carbon::parse('2026-10-06 12:00:00.250000'));
+
+    $future = $model::forceCreate(['email' => fake()->email(), 'last_seen_at' => now()->addHour()])->fresh();
+    $stale = $model::query()->findOrFail($future->id);
+
+    expect(LastSeen::record($future))->toBeTrue()
+        ->and($future->fresh()->last_seen_at->isFuture())->toBeFalse();
+
+    // $stale still holds the future value, which another write has replaced in the meantime.
+    expect(LastSeen::record($stale))->toBeFalse();
+})->with([
+    'default' => [User::class],
+    'microseconds' => [MicrosecondUser::class],
+    'ISO 8601' => [IsoFormatUser::class],
+    'unix timestamp' => [UnixTimestampUser::class],
+    'cast that stores UTC' => [UtcStoredUser::class],
 ]);
 
 it('agrees with recentlySeen() in the scope for the date format of the model', function (string $model) {

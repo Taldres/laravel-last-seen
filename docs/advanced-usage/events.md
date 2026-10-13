@@ -36,6 +36,8 @@ example by deduplicating notifications.
 
 - The user is already updated when the listener runs. A listener must not record the same user again: with an update
   threshold of `0` and a column that stores fractions of a second that recurses.
+- If the key of the model was changed in memory, the row of the original key is written. The event then carries a copy
+  of the model with the original key, so a queued listener loads the user whose row was written.
 - The event implements `ShouldDispatchAfterCommit`, so listeners for a write that is rolled back are not called. With
   several database connections the framework attaches the event to the last open transaction of any connection, so the
   rollback of an unrelated transaction can drop it. After a rollback the model instance still holds the new value.

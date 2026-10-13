@@ -56,3 +56,41 @@ function skipUnlessDatabaseStoresDateOffsets(): void
         test()->markTestSkipped('This database cannot store a date with a timezone offset in a datetime column.');
     }
 }
+
+/**
+ * Runs the callback with the given environment variables set, the way the .env file sets them, and restores the
+ * previous values afterwards.
+ *
+ * @template TResult
+ *
+ * @param  array<string, string>  $variables
+ * @param  Closure(): TResult  $callback
+ * @return TResult
+ */
+function withEnvironment(array $variables, Closure $callback): mixed
+{
+    $previous = [];
+
+    foreach ($variables as $name => $value) {
+        $previous[$name] = [$_ENV[$name] ?? null, $_SERVER[$name] ?? null];
+        $_ENV[$name] = $_SERVER[$name] = $value;
+    }
+
+    try {
+        return $callback();
+    } finally {
+        foreach ($previous as $name => [$env, $server]) {
+            if ($env === null) {
+                unset($_ENV[$name]);
+            } else {
+                $_ENV[$name] = $env;
+            }
+
+            if ($server === null) {
+                unset($_SERVER[$name]);
+            } else {
+                $_SERVER[$name] = $server;
+            }
+        }
+    }
+}

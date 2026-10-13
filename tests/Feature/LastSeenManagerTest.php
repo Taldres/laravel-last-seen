@@ -11,10 +11,13 @@ use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Str;
 use InvalidArgumentException;
 use LogicException;
 use RuntimeException;
 use Taldres\LastSeen\Enums\LastSeenDefaultThreshold;
+use Taldres\LastSeen\Events\LastSeenRecordedEvent;
 use Taldres\LastSeen\Facades\LastSeen;
 use Taldres\LastSeen\Tests\TestModels\CastsMethodUser;
 use Taldres\LastSeen\Tests\TestModels\ImmutableCastUser;
@@ -98,18 +101,71 @@ it('calls the trackUsing callback only when a write is due', function () {
     expect($calls)->toBe(1);
 });
 
-it('replaces a last_seen_at in the future', function () {
+it('replaces a last_seen_at in the future that the model read', function () {
     $this->travelTo(Carbon::parse('2026-10-06 12:00:00'));
 
     $loaded = User::forceCreate(['email' => fake()->email(), 'last_seen_at' => '2026-10-07 12:00:00'])->fresh();
-    $partial = User::query()->select(['id', 'email'])->findOrFail(
-        User::forceCreate(['email' => fake()->email(), 'last_seen_at' => '2026-10-07 12:00:00'])->id,
-    );
 
     expect(LastSeen::record($loaded))->toBeTrue()
-        ->and($loaded->fresh()->last_seen_at->toDateTimeString())->toBe('2026-10-06 12:00:00')
-        ->and(LastSeen::record($partial))->toBeTrue();
+        ->and($loaded->fresh()->last_seen_at->toDateTimeString())->toBe('2026-10-06 12:00:00');
 });
+
+it('replaces a future last_seen_at that other code wrote in another format', function () {
+    $this->travelTo(Carbon::parse('2026-10-06 12:00:00'));
+
+    $id = User::create(['email' => fake()->email()])->id;
+    DB::table('users')->where('id', $id)->update(['last_seen_at' => '2026-10-07 12:00:00.500']);
+
+    expect(LastSeen::record(User::findOrFail($id)))->toBeTrue()
+        ->and(User::findOrFail($id)->last_seen_at->toDateTimeString())->toBe('2026-10-06 12:00:00');
+});
+
+it('leaves a future last_seen_at alone for a model loaded without it, until the value has passed', function () {
+    $this->travelTo(Carbon::parse('2026-10-06 12:00:00'));
+
+    $id = User::forceCreate(['email' => fake()->email(), 'last_seen_at' => '2026-10-06 12:30:00'])->id;
+    $partial = fn () => User::query()->select(['id', 'email'])->findOrFail($id);
+
+    expect(LastSeen::record($partial()))->toBeFalse()
+        ->and(User::findOrFail($id)->last_seen_at->toDateTimeString())->toBe('2026-10-06 12:30:00');
+
+    $this->travelTo(Carbon::parse('2026-10-06 12:31:00'));
+
+    expect(LastSeen::record($partial()))->toBeTrue()
+        ->and(User::findOrFail($id)->last_seen_at->toDateTimeString())->toBe('2026-10-06 12:31:00');
+});
+
+it('does not let a delayed write replace the newer value of a parallel request', function (int $threshold) {
+    config(['last-seen.update_threshold' => $threshold]);
+    $this->travelTo(Carbon::parse('2026-10-06 12:00:00'));
+    Event::fake([LastSeenRecordedEvent::class]);
+
+    $user = User::forceCreate(['email' => fake()->email(), 'last_seen_at' => '2026-10-06 11:00:00']);
+    $delayed = $user->fresh();
+    $parallel = $user->fresh();
+    $interleaved = false;
+    $parallelWritten = null;
+
+    // The delayed request has built its UPDATE for 12:00:00. Before it runs, a parallel request writes 12:00:01.
+    DB::connection()->beforeExecuting(function (string $query) use (&$interleaved, &$parallelWritten, $parallel) {
+        if ($interleaved || ! Str::startsWith(Str::lower($query), 'update')) {
+            return;
+        }
+
+        $interleaved = true;
+        $this->travelTo(Carbon::parse('2026-10-06 12:00:01'));
+        $parallelWritten = LastSeen::record($parallel);
+    });
+
+    expect(LastSeen::record($delayed))->toBeFalse()
+        ->and($parallelWritten)->toBeTrue()
+        ->and($user->fresh()->last_seen_at->toDateTimeString())->toBe('2026-10-06 12:00:01');
+
+    Event::assertDispatchedTimes(LastSeenRecordedEvent::class, 1);
+})->with([
+    'update threshold of 60' => [60],
+    'update threshold of 0' => [0],
+]);
 
 it('stores last_seen_at the way Eloquent saves it, also through date formats and casts', function (string $model, string $timezone) {
     createUnixTimestampUsersTable();
@@ -477,3 +533,31 @@ it('records and checks activity when Date uses CarbonImmutable', function () {
         Date::useDefault();
     }
 });
+
+it('rejects an invalid threshold from the .env file instead of turning it into 0', function (string $variable, string $key) {
+    $configuration = withEnvironment([$variable => 'banana'], fn () => require __DIR__.'/../../config/last-seen.php');
+    config(['last-seen' => $configuration]);
+
+    $user = User::forceCreate(['email' => fake()->email(), 'last_seen_at' => now()->subHour()]);
+
+    expect($configuration[Str::after($key, 'last-seen.')])->toBe('banana')
+        ->and(fn () => LastSeen::record($user))->toThrow(InvalidArgumentException::class, $key)
+        ->and($user->fresh()->last_seen_at->toDateTimeString())->toBe(now()->subHour()->toDateTimeString());
+})->with([
+    'update threshold' => ['LAST_SEEN_UPDATE_THRESHOLD', 'last-seen.update_threshold'],
+    'recently seen threshold' => ['LAST_SEEN_RECENTLY_SEEN_THRESHOLD', 'last-seen.recently_seen_threshold'],
+]);
+
+it('reads the thresholds from the .env file as integers, and an empty value as the default', function (string $value, int $update, int $recentlySeen) {
+    $configuration = withEnvironment(
+        ['LAST_SEEN_UPDATE_THRESHOLD' => $value, 'LAST_SEEN_RECENTLY_SEEN_THRESHOLD' => $value],
+        fn () => require __DIR__.'/../../config/last-seen.php',
+    );
+
+    expect($configuration['update_threshold'])->toBe($update)
+        ->and($configuration['recently_seen_threshold'])->toBe($recentlySeen);
+})->with([
+    'digits' => ['15', 15, 15],
+    'zero' => ['0', 0, 0],
+    'empty' => ['', 60, 300],
+]);

@@ -46,7 +46,10 @@ the `upgrade-laravel-last-seen-v1` skill instead.
 
 Settings live in `config/last-seen.php` and the `.env` file: `LAST_SEEN_ENABLED`, `LAST_SEEN_UPDATE_THRESHOLD`
 (seconds between writes, default 60) and `LAST_SEEN_RECENTLY_SEEN_THRESHOLD` (seconds a user counts as recently
-seen, default 300). Both thresholds must be integers of 0 or more, otherwise they throw an `InvalidArgumentException`.
+seen, default 300). Both thresholds must be integers of 0 or more, otherwise they throw an `InvalidArgumentException`;
+an invalid `.env` value is rejected, not cast to 0, and an empty one falls back to the default. A configuration file
+published before 1.6.1 still casts with `(int)`: replace that with `LastSeenDefaultThreshold::Update->fromEnv(...)` and
+`LastSeenDefaultThreshold::RecentlySeen->fromEnv(...)` as in the package's current config file.
 `php artisan about --only=last_seen` (add `--json` to parse it) shows these settings and whether the user model uses the
 trait (only the class in `models.user`), and marks a missing trait, invalid thresholds and a recently seen threshold
 that is not above the update threshold. Run it to check the setup.

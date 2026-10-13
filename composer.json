@@ -5,9 +5,8 @@
   "keywords": [
     "laravel",
     "last-seen",
-    "online-status",
+    "last-activity",
     "user-activity",
-    "presence",
     "middleware"
   ],
   "homepage": "https://github.com/Taldres/laravel-last-seen",

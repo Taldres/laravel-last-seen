@@ -141,7 +141,7 @@ Each setting has a default value, so you only need to override them if you want 
 - For each such request of a tracked user the middleware fires a `UserWasActiveEvent`. The event means "activity
   detected", not "timestamp written": `last_seen_at` is only written once `LAST_SEEN_UPDATE_THRESHOLD` seconds have
   passed since the stored value, so it can lag behind the latest activity by up to that many seconds. Parallel requests
-  write it only once.
+  write it only once. Each write fires a `LastSeenRecordedEvent`, see [Events](#events).
 - The middleware records the user that is authenticated once the request has been handled: the user of the default
   guard, or of the guard an `auth:<guard>` middleware selected. Logout requests are therefore not recorded, and when a
   request switches users, for example while an admin impersonates someone, only the final user is.
@@ -241,8 +241,61 @@ the container, so you can also inject the manager directly. The trait, the middl
 
 ### Events
 
-The package fires a `UserWasActiveEvent` whenever activity of a tracked user is detected. You can listen to this event
-for custom logic. Recording the activity never fires the event again.
+The package fires two events:
+
+- `UserWasActiveEvent` whenever activity of a tracked user is detected, which is every request that passes the
+  middleware. Recording the activity never fires it again.
+- `LastSeenRecordedEvent` whenever `last_seen_at` was actually written, no matter whether the middleware, `$user->updateLastSeenAt()`
+  or `LastSeen::record()` did it. That is about once per user and `LAST_SEEN_UPDATE_THRESHOLD` seconds, so it is the
+  event to use for work that should not run on every request.
+
+```php
+use Taldres\LastSeen\Events\LastSeenRecordedEvent;
+
+Event::listen(function (LastSeenRecordedEvent $event) {
+    if ($event->cameOnline) {
+        // $event->user was not recently seen before this write.
+    }
+});
+```
+
+The event carries the `$user`, the `$previousLastSeenAt` the model held before the write and `$cameOnline`. The user
+came online when they were not recently seen before the write, which includes users who were never seen and models
+that were just created. A previous value that cannot be read is unknown: that is a model loaded without the
+`last_seen_at` column, or a cast that does not return a `Carbon` instance. It is reported as `null` with `$cameOnline`
+set to `false`, so the package never claims a transition it did not observe. A previous value in the future does not
+count as coming online. With a recently seen threshold below the update threshold every other write counts as coming
+online.
+
+Both values come from the model instance, not from the database, so they are only as fresh as that instance. They can
+be wrong when the instance is stale: a user that your application serves from a cache, parallel requests with an update
+threshold of `0`, `forgetLastSeenAt()` running at the same time as a request, or a retry on the same instance after a
+write was rolled back. Treat `$cameOnline` as a hint and make listeners idempotent, for example by deduplicating
+notifications.
+
+- The user is already updated when the listener runs. A listener must not record the same user again: with an update
+  threshold of `0` and a column that stores fractions of a second that recurses.
+- The event implements `ShouldDispatchAfterCommit`, so listeners for a write that is rolled back are not called. With
+  several database connections the framework attaches the event to the last open transaction of any connection, so the
+  rollback of an unrelated transaction can drop it. After a rollback the model instance still holds the new value.
+- A listener that throws makes `record()` and `updateLastSeenAt()` throw after the row was written, and the middleware
+  reports such exceptions without changing the response. Inside an open transaction the listeners run when it commits.
+  An exception then comes out of the commit instead of `record()`, can skip later `DB::afterCommit()` callbacks and is
+  not caught by the middleware, so it can turn the response into an error when the transaction wraps the request. Use
+  queued listeners for side effects, and let them decide whether to queue at all, for example to queue only when the
+  user came online:
+
+    ```php
+    public function shouldQueue(LastSeenRecordedEvent $event): bool
+    {
+        return $event->cameOnline;
+    }
+    ```
+
+- Queued listeners store the user's key and `previousLastSeenAt` in the queue, see [Privacy](#privacy). If a listener
+  logs the event, it creates the activity history that the package avoids by itself.
+- There is no event for users who go offline: nothing happens in the application when they stop sending requests. Use
+  a scheduled job and the `notRecentlySeen()` scope for that.
 
 ### Testing Your Application
 
@@ -268,6 +321,10 @@ take a user also accept a callback that receives the model, for example
 users that would not be tracked are not recorded. It ignores the update threshold, so every call counts.
 
 - Use `Event::fake([UserWasActiveEvent::class])` to assert that activity was detected without writing anything.
+- Use `Event::fake([LastSeenRecordedEvent::class])` to assert that a write happened. The row is still written. With a
+  full `Event::fake()`, `Event::assertNothingDispatched()` fails after a direct `$user->updateLastSeenAt()`.
+- `LastSeen::fake()` writes nothing and fires no `LastSeenRecordedEvent`. Dispatch the event yourself to test your
+  listeners.
 - Disable tracking with `config(['last-seen.enabled' => false])` or `LastSeen::trackUsing(fn () => false)`.
 - When mocking the facade, use `LastSeen::partialMock()` or stub `shouldTrack()`. A `LastSeen::spy()` returns `false`
   from `shouldTrack()`, so the middleware never calls `record()`.
@@ -319,6 +376,8 @@ keeps the data small and under your control:
   activity history, and no IP address or user agent is stored.
 - It does not send any data to external services.
 - Who may see another user's activity status is up to your application, for example through policies.
+- Listeners of the `LastSeenRecordedEvent` receive the user and the previous `last_seen_at`. What they do with it, such
+  as logging it or queueing it, is up to your application, see [Deleting the Timestamp](#deleting-the-timestamp).
 
 ### Opting Users Out
 
@@ -336,7 +395,7 @@ public function boot(): void
 ```
 
 For users the callback rejects, the middleware fires no `UserWasActiveEvent` and `updateLastSeenAt()` leaves
-`last_seen_at` untouched. The callback receives every model that uses the trait, so type-hint `Model` if more than one
+`last_seen_at` untouched and fires no `LastSeenRecordedEvent`. The callback receives every model that uses the trait, so type-hint `Model` if more than one
 of your models does. Register it once while booting: it stays active for all later requests, also in Octane or queue
 workers.
 
@@ -354,6 +413,10 @@ LastSeen::trackUsing(fn (User $user): bool => ! session()->has('impersonator_id'
   writes it again. It throws a `LogicException` for a model that was loaded without its primary key.
 - When a user is deleted, `last_seen_at` is deleted with the row.
 - `LAST_SEEN_ENABLED=false` only stops new writes. It does not delete stored values.
+- A queued listener of the `LastSeenRecordedEvent` copies the user's key and `previousLastSeenAt` into the `jobs` table,
+  and into `failed_jobs` when it fails. Neither `forgetLastSeenAt()` nor deleting the user removes those copies. Add
+  `public $deleteWhenMissingModels = true;` to the listener so jobs for deleted users are dropped instead of failing,
+  and prune failed jobs. Tools that record events, such as Telescope's event watcher, store the payload as well.
 
 ## Upgrading
 

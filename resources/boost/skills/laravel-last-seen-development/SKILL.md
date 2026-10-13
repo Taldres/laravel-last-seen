@@ -1,6 +1,6 @@
 ---
 name: laravel-last-seen-development
-description: Track and query when users were last active with taldres/laravel-last-seen, including the last_seen_at column, recentlySeen(), the onlyRecentlySeen(), notRecentlySeen(), neverSeen() and lastSeenBefore() scopes, UpdateLastSeenMiddleware, the LastSeen facade, faking it in tests and opting users out.
+description: Track and query when users were last active with taldres/laravel-last-seen, including the last_seen_at column, recentlySeen(), the onlyRecentlySeen(), notRecentlySeen(), neverSeen() and lastSeenBefore() scopes, UpdateLastSeenMiddleware, the UserWasActiveEvent and LastSeenRecordedEvent events, the LastSeen facade, faking it in tests and opting users out.
 ---
 
 # Laravel Last Seen Development
@@ -97,8 +97,25 @@ middleware records the user of the guard that is authenticated after the request
 ## Events
 
 The middleware fires `Taldres\LastSeen\Events\UserWasActiveEvent` once per request for the user authenticated after the
-request, so logout requests are not recorded. Listen to it for custom logic. Recording activity never fires the event
-again. Exceptions from the guard, the `trackUsing()` callback and listeners are reported without changing the response.
+request, so logout requests are not recorded. Recording activity never fires it again. Exceptions from the guard, the
+`trackUsing()` callback and listeners are reported without changing the response.
+
+`Taldres\LastSeen\Events\LastSeenRecordedEvent` fires whenever `last_seen_at` was actually written (middleware,
+`updateLastSeenAt()` or `LastSeen::record()`), about once per user and update threshold. Use it instead of
+`UserWasActiveEvent` for work that must not run on every request. It carries `$user` (already updated),
+`$previousLastSeenAt` and `$cameOnline` (not recently seen before, including never seen and just created models). An
+unreadable previous value (model loaded without the column, or a cast that returns no `Carbon`) gives `null` and
+`false`; a future value gives `false`. Both values come from the model instance, so a cached user, parallel requests with
+an update threshold of 0, a concurrent `forgetLastSeenAt()` or a retry after a rollback can make them wrong: treat
+`cameOnline` as a hint and make listeners idempotent.
+
+The event implements `ShouldDispatchAfterCommit`, so a rolled back write fires nothing (with several connections an
+unrelated rollback can drop it). A listener that throws makes `record()` throw after the write, but inside an open
+transaction the listener runs at commit, so the exception comes out of the commit, can skip later `DB::afterCommit()`
+callbacks and is not caught by the middleware. Prefer queued listeners, and queue only on `cameOnline` with
+`shouldQueue(LastSeenRecordedEvent $event): bool`. A listener must not record the same user again. Queued listeners copy
+the user key and `previousLastSeenAt` into `jobs` and `failed_jobs`, which `forgetLastSeenAt()` does not remove: set
+`$deleteWhenMissingModels = true` on them. There is no event for going offline.
 
 ## Testing
 
@@ -108,6 +125,8 @@ again. Exceptions from the guard, the `trackUsing()` callback and listeners are 
   `assertNothingForgotten()`. Each takes a model or a `fn (Model $user): bool` callback. The fake keeps the config and
   the `trackUsing()` callback but ignores the update threshold, so every `record()` call for a tracked user counts.
 - Use `Event::fake([UserWasActiveEvent::class])` to assert activity detection without writes.
+- Use `Event::fake([LastSeenRecordedEvent::class])` to assert a write; the row is still written. `LastSeen::fake()`
+  fires no `LastSeenRecordedEvent`, so dispatch it yourself to test listeners.
 - Disable tracking with `config(['last-seen.enabled' => false])` or `LastSeen::trackUsing(fn () => false)`.
 - Mock the facade with `LastSeen::partialMock()` or stub `shouldTrack()`. With `LastSeen::spy()`, `shouldTrack()`
   returns `false` and nothing is recorded.
@@ -125,5 +144,6 @@ again. Exceptions from the guard, the `trackUsing()` callback and listeners are 
 - Setting the recently seen threshold below the update threshold: an active user then drops out of `onlyRecentlySeen()`
   between two writes.
 - Running queries in the `trackUsing()` callback, which runs on every request.
+- Doing heavy work in a `UserWasActiveEvent` listener, which runs on every request: use `LastSeenRecordedEvent`.
 - Calling `recentlySeen()` on users loaded with `select()` without `last_seen_at`: it returns `false`, or throws in
   strict mode.

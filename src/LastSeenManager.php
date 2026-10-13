@@ -8,9 +8,12 @@ use Carbon\CarbonInterface;
 use Closure;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Query\Builder as QueryBuilder;
+use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Event;
 use InvalidArgumentException;
 use LogicException;
 use Taldres\LastSeen\Enums\LastSeenDefaultThreshold;
+use Taldres\LastSeen\Events\LastSeenRecordedEvent;
 use Taldres\LastSeen\Trait\LastSeen;
 
 class LastSeenManager
@@ -22,7 +25,7 @@ class LastSeenManager
 
     /**
      * Writes last_seen_at if tracking is allowed and the update threshold has passed.
-     * Returns whether the stored timestamp changed.
+     * Returns whether the stored timestamp changed, in which case a LastSeenRecordedEvent is fired.
      */
     public function record(Model $user): bool
     {
@@ -32,9 +35,10 @@ class LastSeenManager
 
         $threshold = $this->threshold('last-seen.update_threshold', LastSeenDefaultThreshold::Update);
 
-        $lastSeenAt = array_key_exists('last_seen_at', $user->getAttributes())
-            ? $user->getAttribute('last_seen_at')
-            : null;
+        $loaded = Arr::exists($user->getAttributes(), 'last_seen_at');
+        $lastSeenAt = $loaded ? $user->getAttribute('last_seen_at') : null;
+        // A model that was just created has not been seen, although it does not hold the column yet.
+        $known = $loaded || $user->wasRecentlyCreated;
 
         if ($lastSeenAt instanceof CarbonInterface && ! $lastSeenAt->isFuture() && $lastSeenAt->diffInSeconds(now()) < $threshold) {
             return false;
@@ -43,6 +47,9 @@ class LastSeenManager
         if (! $this->shouldTrack($user)) {
             return false;
         }
+
+        // An invalid recently seen threshold has to fail before the row is written.
+        [$previous, $cameOnline] = $this->previousActivity($known, $lastSeenAt, $this->recentlySeenSince());
 
         $timestamp = $user->freshTimestamp();
         $now = $this->storable($user, $timestamp);
@@ -63,9 +70,26 @@ class LastSeenManager
 
         if ($written) {
             $user->forceFill(['last_seen_at' => $timestamp])->syncOriginalAttribute('last_seen_at');
+
+            Event::dispatch(new LastSeenRecordedEvent($user, $previous, $cameOnline));
         }
 
         return $written;
+    }
+
+    /**
+     * The value the model held and whether it came online. A model loaded without last_seen_at has an unknown
+     * value: it claims no transition it did not observe.
+     *
+     * @return array{0: CarbonInterface|null, 1: bool}
+     */
+    private function previousActivity(bool $known, mixed $lastSeenAt, CarbonInterface $since): array
+    {
+        if ($lastSeenAt instanceof CarbonInterface) {
+            return [$lastSeenAt->copy(), ! $lastSeenAt->gte($since)];
+        }
+
+        return [null, $known && $lastSeenAt === null];
     }
 
     /**

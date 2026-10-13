@@ -121,6 +121,75 @@ it('combines lastSeenBefore() with neverSeen() to find everyone inactive for a w
     expect($ids)->toBe([$longAgo->id, $neverSeen->id]);
 });
 
+it('finds users seen since a moment with lastSeenSince(), including the moment itself and without users who were never seen', function () {
+    $this->travelTo(Carbon::parse('2026-10-06 12:00:00'));
+
+    User::forceCreate(['email' => fake()->email(), 'last_seen_at' => now()->subHours(3)]);
+    User::forceCreate(['email' => fake()->email(), 'last_seen_at' => now()->subMinutes(15)->subSecond()]);
+    $atMoment = User::forceCreate(['email' => fake()->email(), 'last_seen_at' => now()->subMinutes(15)]);
+    $recent = User::forceCreate(['email' => fake()->email(), 'last_seen_at' => now()->subMinute()]);
+    $inTheFuture = User::forceCreate(['email' => fake()->email(), 'last_seen_at' => now()->addMinute()]);
+    User::create(['email' => fake()->email()]);
+
+    expect(User::lastSeenSince(now()->subMinutes(15))->orderBy('id')->pluck('id')->all())
+        ->toBe([$atMoment->id, $recent->id, $inTheFuture->id]);
+});
+
+it('splits the users who were seen into two groups with lastSeenSince() and lastSeenBefore()', function () {
+    $this->travelTo(Carbon::parse('2026-10-06 12:00:00'));
+
+    foreach ([now()->subDay(), now()->subMinute(), now(), now()->addMinute()] as $lastSeenAt) {
+        User::forceCreate(['email' => fake()->email(), 'last_seen_at' => $lastSeenAt]);
+    }
+    User::create(['email' => fake()->email()]);
+
+    $seen = User::query()->whereNotNull('last_seen_at')->orderBy('id')->pluck('id')->all();
+    $since = User::lastSeenSince(now())->orderBy('id')->pluck('id')->all();
+    $before = User::lastSeenBefore(now())->orderBy('id')->pluck('id')->all();
+
+    expect([...$before, ...$since])->toBe($seen)
+        ->and(array_intersect($before, $since))->toBe([]);
+});
+
+it('includes users who were never seen when lastSeenSince() is negated', function () {
+    $this->travelTo(Carbon::parse('2026-10-06 12:00:00'));
+
+    $old = User::forceCreate(['email' => fake()->email(), 'last_seen_at' => now()->subDays(2)]);
+    User::forceCreate(['email' => fake()->email(), 'last_seen_at' => now()->subMinute()]);
+    $neverSeen = User::create(['email' => fake()->email()]);
+
+    $ids = User::query()
+        ->whereNot(fn (Builder $query) => $query->lastSeenSince(now()->subHour()))
+        ->orderBy('id')
+        ->pluck('id')
+        ->all();
+
+    expect($ids)->toBe([$old->id, $neverSeen->id]);
+});
+
+it('compares lastSeenSince() in the application timezone, whatever timezone the moment has', function (callable $moment) {
+    $this->travelTo(Carbon::parse('2026-10-06 12:00:00', 'UTC'));
+
+    User::forceCreate(['email' => fake()->email(), 'last_seen_at' => '2026-10-06 11:29:59']);
+    $atMoment = User::forceCreate(['email' => fake()->email(), 'last_seen_at' => '2026-10-06 11:30:00']);
+
+    expect(User::lastSeenSince($moment())->pluck('id')->all())->toBe([$atMoment->id]);
+})->with([
+    'carbon in the application timezone' => [fn () => Carbon::parse('2026-10-06 11:30:00', 'UTC')],
+    'carbon in another timezone' => [fn () => Carbon::parse('2026-10-06 20:30:00', 'Asia/Tokyo')],
+    'immutable carbon in another timezone' => [fn () => CarbonImmutable::parse('2026-10-06 07:30:00', 'America/New_York')],
+    'native immutable date' => [fn () => new DateTimeImmutable('2026-10-06 11:30:00+00:00')],
+]);
+
+it('does not change the moment passed to lastSeenSince()', function () {
+    $moment = Carbon::parse('2026-10-06 20:30:00', 'Asia/Tokyo');
+
+    User::lastSeenSince($moment)->toBase();
+
+    expect($moment->getTimezone()->getName())->toBe('Asia/Tokyo')
+        ->and($moment->format('Y-m-d H:i:s'))->toBe('2026-10-06 20:30:00');
+});
+
 it('compares lastSeenBefore() in the application timezone, whatever timezone the moment has', function (callable $moment) {
     $this->travelTo(Carbon::parse('2026-10-06 12:00:00', 'UTC'));
 
@@ -170,7 +239,10 @@ it('filters in the storage format of the model, like recentlySeen()', function (
         ->and($model::neverSeen()->pluck('id')->all())->toBe([$neverSeen->id])
         ->and($model::lastSeenBefore(now()->subMinutes(30))->pluck('id')->all())->toBe([$stale->id])
         ->and($model::lastSeenBefore(now()->subMinute())->orderBy('id')->pluck('id')->all())->toBe([$recent->id, $stale->id])
-        ->and($model::lastSeenBefore(now()->subHours(2))->count())->toBe(0);
+        ->and($model::lastSeenBefore(now()->subHours(2))->count())->toBe(0)
+        ->and($model::lastSeenSince(now()->subMinutes(30))->pluck('id')->all())->toBe([$recent->id])
+        ->and($model::lastSeenSince(now()->subMinutes(2))->pluck('id')->all())->toBe([$recent->id])
+        ->and($model::lastSeenSince(now()->subHours(2))->orderBy('id')->pluck('id')->all())->toBe([$recent->id, $stale->id]);
 })->with([
     'unix timestamp date format' => [UnixTimestampUser::class, 'UTC'],
     'microseconds' => [MicrosecondUser::class, 'UTC'],
@@ -203,7 +275,8 @@ it('qualifies last_seen_at so a joined table with the same column does not clash
 
     expect($joined()->notRecentlySeen()->pluck('users.id')->all())->toBe([$stale->id, $neverSeen->id])
         ->and($joined()->neverSeen()->pluck('users.id')->all())->toBe([$neverSeen->id])
-        ->and($joined()->lastSeenBefore(now()->subDay())->pluck('users.id')->all())->toBe([$stale->id]);
+        ->and($joined()->lastSeenBefore(now()->subDay())->pluck('users.id')->all())->toBe([$stale->id])
+        ->and($joined()->lastSeenSince(now()->subDay())->pluck('users.id')->all())->toBe([$recent->id]);
 });
 
 it('skips trashed users like any other query', function () {
@@ -223,5 +296,6 @@ it('skips trashed users like any other query', function () {
     expect(SoftDeletingUser::notRecentlySeen()->orderBy('id')->pluck('id')->all())->toBe([$stale->id, $neverSeen->id])
         ->and(SoftDeletingUser::neverSeen()->pluck('id')->all())->toBe([$neverSeen->id])
         ->and(SoftDeletingUser::withTrashed()->neverSeen()->orderBy('id')->pluck('id')->all())->toBe([$neverSeen->id, $trashed->id])
-        ->and(SoftDeletingUser::lastSeenBefore(now())->pluck('id')->all())->toBe([$stale->id]);
+        ->and(SoftDeletingUser::lastSeenBefore(now())->pluck('id')->all())->toBe([$stale->id])
+        ->and(SoftDeletingUser::lastSeenSince(now()->subWeek())->pluck('id')->all())->toBe([$stale->id]);
 });

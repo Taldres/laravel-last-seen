@@ -97,6 +97,21 @@ trait LastSeen
     }
 
     /**
+     * Users whose last_seen_at is at or after the given moment, for a window other than the recently seen
+     * threshold. Users who were never seen are not included. Together with lastSeenBefore() it splits all users
+     * who were seen at any moment into two groups without a gap or an overlap.
+     *
+     * @param  Builder<static>  $builder
+     */
+    public function scopeLastSeenSince(Builder $builder, DateTimeInterface $moment): void
+    {
+        $column = $builder->qualifyColumn('last_seen_at');
+
+        $builder->whereNotNull($column)
+            ->where($column, '>=', $this->storableLastSeenAt($builder, $moment));
+    }
+
+    /**
      * The value as it is stored in the last_seen_at column, in the date format and cast of the model.
      * The moment is converted to the application timezone first, because last_seen_at is written in it.
      *

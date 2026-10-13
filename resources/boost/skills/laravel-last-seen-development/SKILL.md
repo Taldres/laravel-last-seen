@@ -1,6 +1,6 @@
 ---
 name: laravel-last-seen-development
-description: Track and query when users were last active with taldres/laravel-last-seen, including the last_seen_at column, recentlySeen(), ignoring background requests, the onlyRecentlySeen(), notRecentlySeen(), neverSeen() and lastSeenBefore() scopes, UpdateLastSeenMiddleware, the UserWasActiveEvent and LastSeenRecordedEvent events, the LastSeen facade, faking it in tests and opting users out.
+description: Track and query when users were last active with taldres/laravel-last-seen, including the last_seen_at column, recentlySeen(), ignoring background requests, the onlyRecentlySeen(), notRecentlySeen(), neverSeen(), lastSeenBefore() and lastSeenSince() scopes, UpdateLastSeenMiddleware, the UserWasActiveEvent and LastSeenRecordedEvent events, the LastSeen facade, faking it in tests and opting users out.
 ---
 
 # Laravel Last Seen Development
@@ -57,10 +57,13 @@ User::onlyRecentlySeen()->get();                    // same rule as a query scop
 User::notRecentlySeen()->get();                     // the exact opposite, including users who were never seen
 User::neverSeen()->get();                           // last_seen_at is null
 User::lastSeenBefore(now()->subDays(30))->get();    // last seen before a moment, without users who were never seen
+User::lastSeenSince(now()->subMinutes(15))->get();  // last seen at or after a moment, for a window of your own
 ```
 
 To find everyone inactive for a while, including users who were never seen, combine the scopes:
 `$query->neverSeen()->orWhere->lastSeenBefore(now()->subDays(30))` inside a `where(fn ($query) => ...)` group.
+`lastSeenSince()` and `lastSeenBefore()` for the same moment split the users who were seen without a gap or an overlap.
+Windows shorter than the update threshold are not reliable, because `last_seen_at` lags by up to that many seconds.
 
 ## Writing and Deleting Activity
 
@@ -160,7 +163,7 @@ the user key and `previousLastSeenAt` into `jobs` and `failed_jobs`, which `forg
 - Mass-assigning `last_seen_at`: it is not fillable. Use `LastSeen::record()` or `forceFill()`.
 - Calling `updateLastSeenAt()` in controllers when the middleware already runs on the route.
 - Comparing `last_seen_at` with a hand-written cutoff instead of `onlyRecentlySeen()`, `notRecentlySeen()` or
-  `lastSeenBefore()`, which also respect the model's date format and casts.
+  `lastSeenBefore()` or `lastSeenSince()`, which also respect the model's date format and casts.
 - Negating `onlyRecentlySeen()` by hand with `whereNot`: use `notRecentlySeen()`.
 - Calling `LastSeen::trackUsing()` during a request: the callback stays active for later requests in Octane and queue
   workers.

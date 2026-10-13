@@ -81,3 +81,13 @@ database accepts it in a `datetime` column. MySQL before 8.0.19, MariaDB and SQL
 
    The middleware resolves the authenticated user after the request has been handled, so it also works when
    authentication happens later in the stack, e.g. through a route-level `auth:sanctum` middleware.
+
+6. Check the setup:
+
+    ```bash
+    php artisan about --only=last_seen
+    ```
+
+   The "Last Seen" section shows whether the package is enabled, the user model and whether it uses the trait, and both
+   thresholds. It marks a missing trait, an invalid threshold and a recently seen threshold that is not above the update
+   threshold.

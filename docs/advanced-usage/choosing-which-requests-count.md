@@ -32,6 +32,19 @@ update route with the same headers, and it can bundle the updates of several com
 those of a parent and its bound children. A filter on that route or header would therefore also drop real activity. Use
 a dedicated endpoint, or a marker that your application adds to background requests.
 
+Inertia marks prefetch requests with a `Purpose: prefetch` header. Do not leave those out either: when the user follows
+a prefetched link while the page is still cached, Inertia shows it without another request, so the prefetch is the only
+request the server sees for that visit. Inertia's polling, on the other hand, runs in the background and is not marked.
+Give it a header of your own and leave those requests out:
+
+```js
+usePoll(30000, { only: ['notifications'], headers: { 'X-Background-Poll': '1' } })
+```
+
+```php
+LastSeen::ignoreRequestsUsing(fn (Request $request): bool => $request->hasHeader('X-Background-Poll'));
+```
+
 Requests that an integration makes with an API token are activity of that integration, not of the user. If your
 integrations use tokens of their own, leave them out, for example by the name of the token. Token requests of a mobile
 app stay counted. Check the token itself. With Laravel Sanctum, `tokenCan()` is not enough: requests that authenticate

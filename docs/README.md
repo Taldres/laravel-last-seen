@@ -19,6 +19,11 @@
 - [Several User Models](advanced-usage/several-user-models.md): tracking more than one model
 - [Testing Your Application](advanced-usage/testing.md): `LastSeen::fake()`, event fakes and facade mocks
 
+## Recipes
+
+- [Inactive and Returning Users](recipes/inactive-and-returning-users.md): reminding inactive users once per inactive
+  period and reacting when a user comes back
+
 ## Privacy
 
 - [Privacy](privacy.md): the stored data, opting users out and deleting the timestamp

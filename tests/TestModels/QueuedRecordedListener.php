@@ -16,7 +16,7 @@ class QueuedRecordedListener implements ShouldQueue
 
     public function shouldQueue(LastSeenRecordedEvent $event): bool
     {
-        return $event->cameOnline;
+        return $event->becameRecentlySeen;
     }
 
     public function handle(LastSeenRecordedEvent $event): void

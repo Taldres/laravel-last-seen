@@ -7,6 +7,7 @@ namespace Taldres\LastSeen\Tests\Feature;
 use Illuminate\Auth\GenericUser;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
+use Taldres\LastSeen\Events\LastSeenRecordedEvent;
 use Taldres\LastSeen\Events\UserWasActiveEvent;
 use Taldres\LastSeen\Facades\LastSeen;
 use Taldres\LastSeen\Tests\TestModels\QueuedActivityListener;
@@ -66,7 +67,7 @@ it('does not write when tracking is not allowed', function (string $reason) {
     'rejected by trackUsing' => ['rejected'],
 ]);
 
-it('does not dispatch events while recording', function () {
+it('fires the recorded event, but no activity or model events, while recording', function () {
     $user = User::create(['email' => fake()->email()]);
     $events = [];
     Event::listen('*', function (string $event) use (&$events) {
@@ -79,7 +80,8 @@ it('does not dispatch events while recording', function () {
 
     expect($user->updateLastSeenAt())->toBeTrue()
         ->and(array_filter($events, fn (string $event) => $event === UserWasActiveEvent::class || str_starts_with($event, 'eloquent.')))
-        ->toBe([]);
+        ->toBe([])
+        ->and(collect($events)->countBy()->get(LastSeenRecordedEvent::class, 0))->toBe(2);
 });
 
 it('does not dispatch the event again when a listener records the user', function () {

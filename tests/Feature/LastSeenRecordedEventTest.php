@@ -1,0 +1,345 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Taldres\LastSeen\Tests\Feature;
+
+use Illuminate\Contracts\Events\ShouldDispatchAfterCommit;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Exceptions;
+use Illuminate\Support\Facades\Route;
+use InvalidArgumentException;
+use RuntimeException;
+use Taldres\LastSeen\Events\LastSeenRecordedEvent;
+use Taldres\LastSeen\Events\UserWasActiveEvent;
+use Taldres\LastSeen\Facades\LastSeen;
+use Taldres\LastSeen\Middleware\UpdateLastSeenMiddleware;
+use Taldres\LastSeen\Tests\TestModels\PlainDateUser;
+use Taldres\LastSeen\Tests\TestModels\QueuedRecordedListener;
+use Taldres\LastSeen\Tests\TestModels\User;
+
+beforeEach(function () {
+    Route::get('/last-seen', fn () => 'ok')->middleware(UpdateLastSeenMiddleware::class);
+});
+
+it('fires the event once per write, whichever way the timestamp is recorded', function () {
+    Event::fake([LastSeenRecordedEvent::class]);
+
+    $viaMiddleware = User::create(['email' => fake()->email()]);
+    $viaTrait = User::create(['email' => fake()->email()]);
+    $viaFacade = User::create(['email' => fake()->email()]);
+
+    $this->actingAs($viaMiddleware)->get('/last-seen')->assertOk();
+    $viaTrait->updateLastSeenAt();
+    LastSeen::record($viaFacade);
+
+    Event::assertDispatchedTimes(LastSeenRecordedEvent::class, 3);
+
+    foreach ([$viaMiddleware, $viaTrait, $viaFacade] as $user) {
+        Event::assertDispatched(LastSeenRecordedEvent::class, fn (LastSeenRecordedEvent $event) => $event->user->is($user));
+        expect($user->fresh()->last_seen_at)->not->toBeNull();
+    }
+});
+
+it('fires no event when nothing was written', function () {
+    $this->travelTo(Carbon::parse('2026-10-06 12:00:00'));
+    Event::fake([LastSeenRecordedEvent::class]);
+
+    $recent = User::forceCreate(['email' => fake()->email(), 'last_seen_at' => now()])->fresh();
+    expect(LastSeen::record($recent))->toBeFalse();
+
+    config(['last-seen.enabled' => false]);
+    expect(LastSeen::record(User::create(['email' => fake()->email()])))->toBeFalse();
+    config(['last-seen.enabled' => true]);
+
+    LastSeen::trackUsing(fn (): bool => false);
+    expect(LastSeen::record(User::create(['email' => fake()->email()])))->toBeFalse();
+    LastSeen::trackUsing(null);
+
+    expect(LastSeen::record(new User(['email' => fake()->email()])))->toBeFalse();
+
+    $untracked = new class extends Model
+    {
+        protected $table = 'users';
+
+        protected $guarded = [];
+
+        public $timestamps = false;
+    };
+    $untracked->forceFill(['email' => fake()->email()])->save();
+    expect(LastSeen::record($untracked))->toBeFalse();
+
+    $deleted = User::forceCreate(['email' => fake()->email(), 'last_seen_at' => '2026-10-06 11:00:00'])->fresh();
+    User::query()->whereKey($deleted->id)->delete();
+    expect(LastSeen::record($deleted))->toBeFalse();
+
+    $email = fake()->email();
+    User::create(['email' => $email]);
+    expect(LastSeen::record(User::query()->select(['email', 'last_seen_at'])->where('email', $email)->firstOrFail()))->toBeFalse();
+
+    Event::assertNotDispatched(LastSeenRecordedEvent::class);
+});
+
+it('fires the event only for the request that wins the race', function () {
+    $this->travelTo(Carbon::parse('2026-10-06 12:00:00'));
+    Event::fake([LastSeenRecordedEvent::class]);
+
+    $user = User::forceCreate(['email' => fake()->email(), 'last_seen_at' => '2026-10-06 11:00:00']);
+    $first = User::findOrFail($user->id);
+    $second = User::findOrFail($user->id);
+
+    expect(LastSeen::record($first))->toBeTrue()
+        ->and(LastSeen::record($second))->toBeFalse();
+
+    Event::assertDispatchedTimes(LastSeenRecordedEvent::class, 1);
+});
+
+it('reports the previous value and whether the user came online', function (?string $previous, bool $cameOnline) {
+    $this->travelTo(Carbon::parse('2026-10-06 12:10:00'));
+    $recorded = null;
+    Event::listen(LastSeenRecordedEvent::class, function (LastSeenRecordedEvent $event) use (&$recorded) {
+        $recorded = $event;
+    });
+
+    $user = User::forceCreate(['email' => fake()->email(), 'last_seen_at' => $previous])->fresh();
+
+    expect(LastSeen::record($user))->toBeTrue()
+        ->and($recorded)->toBeInstanceOf(LastSeenRecordedEvent::class)
+        ->and($recorded->previousLastSeenAt?->format('Y-m-d H:i:s'))->toBe($previous)
+        ->and($recorded->cameOnline)->toBe($cameOnline);
+})->with([
+    'never seen' => [null, true],
+    'older than the recently seen threshold' => ['2026-10-06 12:00:00', true],
+    'one second before the cutoff' => ['2026-10-06 12:04:59', true],
+    'exactly at the cutoff' => ['2026-10-06 12:05:00', false],
+    'within the recently seen threshold' => ['2026-10-06 12:08:00', false],
+    'in the future' => ['2026-10-06 12:30:00', false],
+]);
+
+it('treats a model that was just created as never seen', function () {
+    $recorded = null;
+    Event::listen(LastSeenRecordedEvent::class, function (LastSeenRecordedEvent $event) use (&$recorded) {
+        $recorded = $event;
+    });
+
+    LastSeen::record(User::create(['email' => fake()->email()]));
+
+    expect($recorded->previousLastSeenAt)->toBeNull()
+        ->and($recorded->cameOnline)->toBeTrue();
+});
+
+it('reports an unknown previous value for a model loaded without last_seen_at', function (bool $strict) {
+    $recorded = null;
+    Event::listen(LastSeenRecordedEvent::class, function (LastSeenRecordedEvent $event) use (&$recorded) {
+        $recorded = $event;
+    });
+
+    $user = User::create(['email' => fake()->email()]);
+    $partial = User::query()->select(['id', 'email'])->findOrFail($user->id);
+
+    Model::preventAccessingMissingAttributes($strict);
+
+    try {
+        expect(LastSeen::record($partial))->toBeTrue()
+            ->and($recorded->user)->toBe($partial)
+            ->and($recorded->previousLastSeenAt)->toBeNull()
+            ->and($recorded->cameOnline)->toBeFalse()
+            ->and($user->fresh()->last_seen_at)->not->toBeNull();
+    } finally {
+        Model::preventAccessingMissingAttributes(false);
+    }
+})->with([
+    'strict mode' => [true],
+    'lenient mode' => [false],
+]);
+
+it('reports an unknown previous value when the cast does not return a Carbon instance', function () {
+    $recorded = null;
+    Event::listen(LastSeenRecordedEvent::class, function (LastSeenRecordedEvent $event) use (&$recorded) {
+        $recorded = $event;
+    });
+
+    $user = PlainDateUser::forceCreate(['email' => fake()->email(), 'last_seen_at' => Carbon::parse('2026-10-06 11:00:00')])->fresh();
+
+    expect(LastSeen::record($user))->toBeTrue()
+        ->and($recorded->previousLastSeenAt)->toBeNull()
+        ->and($recorded->cameOnline)->toBeFalse();
+});
+
+it('counts every write as coming online when the recently seen threshold is below the update threshold', function () {
+    config(['last-seen.update_threshold' => 60, 'last-seen.recently_seen_threshold' => 30]);
+    $cameOnline = [];
+    Event::listen(LastSeenRecordedEvent::class, function (LastSeenRecordedEvent $event) use (&$cameOnline) {
+        $cameOnline[] = $event->cameOnline;
+    });
+
+    $user = User::create(['email' => fake()->email()]);
+
+    LastSeen::record($user);
+    $this->travel(61)->seconds();
+    LastSeen::record($user);
+
+    expect($cameOnline)->toBe([true, true]);
+});
+
+it('hands the listener the model that was just recorded', function () {
+    $this->travelTo(Carbon::parse('2026-10-06 12:00:00'));
+    $user = User::create(['email' => fake()->email()]);
+    $seen = null;
+
+    Event::listen(LastSeenRecordedEvent::class, function (LastSeenRecordedEvent $event) use (&$seen, $user) {
+        $seen = [
+            'same instance' => $event->user === $user,
+            'last_seen_at' => $event->user->last_seen_at?->toDateTimeString(),
+            'dirty' => $event->user->isDirty(),
+        ];
+    });
+
+    LastSeen::record($user);
+
+    expect($seen)->toBe(['same instance' => true, 'last_seen_at' => '2026-10-06 12:00:00', 'dirty' => false]);
+});
+
+it('dispatches after the transaction commits and drops the event when it rolls back', function () {
+    // The DDL in the test setup commits implicitly on these databases, which ends the transaction RefreshDatabase opened.
+    if (in_array(DB::getDriverName(), ['mysql', 'mariadb'], true)) {
+        test()->markTestSkipped('MySQL and MariaDB commit the test transaction when the tables are created.');
+    }
+
+    $calls = 0;
+    Event::listen(LastSeenRecordedEvent::class, function () use (&$calls) {
+        $calls++;
+    });
+    $user = User::create(['email' => fake()->email()]);
+
+    try {
+        DB::transaction(function () use ($user) {
+            LastSeen::record($user);
+
+            throw new RuntimeException('roll back');
+        });
+    } catch (RuntimeException) {
+    }
+
+    expect($calls)->toBe(0)
+        ->and($user->fresh()->last_seen_at)->toBeNull()
+        ->and(new LastSeenRecordedEvent($user, null, true))->toBeInstanceOf(ShouldDispatchAfterCommit::class);
+
+    DB::transaction(function () use ($user, &$calls) {
+        LastSeen::record($user->fresh());
+
+        expect($calls)->toBe(0);
+    });
+
+    expect($calls)->toBe(1);
+});
+
+it('does not fire a second event when a listener records the user again', function () {
+    $this->travelTo(Carbon::parse('2026-10-06 12:00:00'));
+    $user = User::create(['email' => fake()->email()]);
+    $dispatched = 0;
+
+    Event::listen(LastSeenRecordedEvent::class, function (LastSeenRecordedEvent $event) use (&$dispatched) {
+        $dispatched++;
+        $event->user->updateLastSeenAt();
+    });
+
+    LastSeen::record($user);
+
+    expect($dispatched)->toBe(1);
+});
+
+it('lets an exception from a listener out of record() after the row was written', function () {
+    Event::listen(LastSeenRecordedEvent::class, fn () => throw new RuntimeException('listener failed'));
+    $user = User::create(['email' => fake()->email()]);
+
+    expect(fn () => LastSeen::record($user))->toThrow(RuntimeException::class, 'listener failed')
+        ->and($user->fresh()->last_seen_at)->not->toBeNull()
+        ->and($user->last_seen_at)->not->toBeNull();
+});
+
+it('reports a failing listener and keeps the response of the request', function () {
+    Exceptions::fake();
+    Event::listen(LastSeenRecordedEvent::class, fn () => throw new RuntimeException('listener failed'));
+
+    $this->actingAs(User::create(['email' => fake()->email()]))->get('/last-seen')->assertOk()->assertSee('ok');
+
+    Exceptions::assertReported(fn (RuntimeException $exception) => $exception->getMessage() === 'listener failed');
+});
+
+it('queues a listener only when the user came online', function () {
+    $this->travelTo(Carbon::parse('2026-10-06 12:10:00'));
+    QueuedRecordedListener::$events = [];
+    Event::listen(LastSeenRecordedEvent::class, QueuedRecordedListener::class);
+
+    $online = User::create(['email' => fake()->email()]);
+    $active = User::forceCreate(['email' => fake()->email(), 'last_seen_at' => '2026-10-06 12:08:00'])->fresh();
+
+    try {
+        LastSeen::record($online);
+        LastSeen::record($active);
+
+        expect(QueuedRecordedListener::$events)->toHaveCount(1)
+            ->and(QueuedRecordedListener::$events[0]->user)->not->toBe($online)
+            ->and(QueuedRecordedListener::$events[0]->user->is($online))->toBeTrue()
+            ->and(QueuedRecordedListener::$events[0]->user->last_seen_at?->toDateTimeString())->toBe('2026-10-06 12:10:00')
+            ->and(QueuedRecordedListener::$events[0]->previousLastSeenAt)->toBeNull()
+            ->and(QueuedRecordedListener::$events[0]->cameOnline)->toBeTrue();
+    } finally {
+        QueuedRecordedListener::$events = [];
+    }
+});
+
+it('keeps the previous value when the event is serialized', function () {
+    $user = User::forceCreate(['email' => fake()->email(), 'last_seen_at' => '2026-10-06 11:00:00']);
+
+    $restored = unserialize(serialize(new LastSeenRecordedEvent($user, Carbon::parse('2026-10-06 11:00:00'), true)));
+
+    expect($restored->user->is($user))->toBeTrue()
+        ->and($restored->previousLastSeenAt?->toDateTimeString())->toBe('2026-10-06 11:00:00')
+        ->and($restored->cameOnline)->toBeTrue();
+});
+
+it('fires the event while the write still happens under Event::fake()', function () {
+    Event::fake([LastSeenRecordedEvent::class]);
+    $user = User::create(['email' => fake()->email()]);
+
+    LastSeen::record($user);
+
+    Event::assertDispatched(LastSeenRecordedEvent::class);
+    expect($user->fresh()->last_seen_at)->not->toBeNull();
+});
+
+it('fires no event for the fake, which writes nothing', function () {
+    LastSeen::fake();
+    Event::fake([LastSeenRecordedEvent::class]);
+    $user = User::create(['email' => fake()->email()]);
+
+    LastSeen::record($user);
+
+    Event::assertNotDispatched(LastSeenRecordedEvent::class);
+    LastSeen::assertRecorded($user);
+});
+
+it('fires the event but not the activity event when recording', function () {
+    Event::fake([LastSeenRecordedEvent::class, UserWasActiveEvent::class]);
+
+    LastSeen::record(User::create(['email' => fake()->email()]));
+
+    Event::assertDispatched(LastSeenRecordedEvent::class);
+    Event::assertNotDispatched(UserWasActiveEvent::class);
+});
+
+it('fails before the row is written when the recently seen threshold is invalid', function () {
+    Event::fake([LastSeenRecordedEvent::class]);
+    config(['last-seen.recently_seen_threshold' => -1]);
+    $user = User::create(['email' => fake()->email()]);
+
+    expect(fn () => LastSeen::record($user))->toThrow(InvalidArgumentException::class)
+        ->and($user->fresh()->last_seen_at)->toBeNull();
+
+    Event::assertNotDispatched(LastSeenRecordedEvent::class);
+});

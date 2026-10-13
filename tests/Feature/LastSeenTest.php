@@ -91,6 +91,7 @@ it('checks if onlyRecentlySeen scope returns only recently seen users', function
 });
 
 it('checks if updateLastSeenAt does not update when within threshold', function () {
+    $this->freezeSecond();
     $initialTime = now()->subSeconds(10);
 
     $user = User::forceCreate([
@@ -105,14 +106,13 @@ it('checks if updateLastSeenAt does not update when within threshold', function 
 });
 
 it('checks if updateLastSeenAt updates when threshold is exceeded', function () {
+    $this->freezeSecond();
     $threshold = (int) config('last-seen.update_threshold');
 
     $user = User::forceCreate([
         'email' => fake()->email(),
         'last_seen_at' => now()->subSeconds($threshold + 1),
     ]);
-
-    $this->travelTo(now());
 
     $user->updateLastSeenAt();
     $user->refresh();
@@ -121,6 +121,7 @@ it('checks if updateLastSeenAt updates when threshold is exceeded', function () 
 });
 
 it('checks if updateLastSeenAt does not touch the updated_at timestamp', function () {
+    $this->freezeSecond();
     $user = TimestampedUser::create(['email' => fake()->email()]);
     $updatedAt = $user->updated_at;
 
@@ -193,6 +194,7 @@ it('checks if updateLastSeenAt does not write for users that should not be track
 });
 
 it('checks if forgetLastSeenAt clears last_seen_at without touching anything else', function () {
+    $this->freezeSecond();
     $user = TimestampedUser::forceCreate(['email' => $email = fake()->email(), 'last_seen_at' => now()]);
     $updatedAt = $user->updated_at;
     $user->email = fake()->email();

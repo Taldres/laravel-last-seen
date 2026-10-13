@@ -61,7 +61,8 @@ example by deduplicating notifications.
 - Queued listeners store the user's key, `previousLastSeenAt` and `recordedAt` in the queue, see [Privacy](../privacy.md#deleting-the-timestamp). If
   a listener logs the event, it creates the activity history that the package avoids by itself.
 - There is no event for users who stop being recently seen: nothing happens in the application when they stop sending
-  requests. Use a scheduled job and the `notRecentlySeen()` scope for that.
+  requests. Use a scheduled job and the scopes for that, see
+  [Inactive and Returning Users](../recipes/inactive-and-returning-users.md).
 
 ## Manually Dispatching the Event
 

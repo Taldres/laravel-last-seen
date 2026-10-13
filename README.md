@@ -186,7 +186,8 @@ LastSeen::assertRecorded($user);
 ## Documentation
 
 The full documentation is in [`docs/`](docs/README.md): how activity is tracked, the query scopes, the events, leaving
-out background requests, several user models, testing your application and privacy.
+out background requests, several user models, testing your application, recipes such as reminding inactive users, and
+privacy.
 
 ## AI Agents
 

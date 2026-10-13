@@ -106,7 +106,9 @@ middleware resolves the user: an ignored request skips that, the `trackUsing()` 
 runs for guests too, so keep it cheap. There is one callback: a second call replaces the first, so combine all conditions
 in one. An exception in it is reported and the request is not recorded. It only concerns the middleware, not
 `LastSeen::record()` or `updateLastSeenAt()`. A filter on Livewire's update route or header also drops real actions,
-because polls and actions share them: use a dedicated endpoint or a marker the application adds. For integrations with
+because polls and actions share them: use a dedicated endpoint or a marker the application adds. Keep Inertia
+prefetch requests (`Purpose: prefetch`): a visit to a cached prefetched page sends no further request. Inertia polls are
+not marked, so pass a header of your own via `usePoll(..., { headers: {...} })` and ignore that. For integrations with
 an API token, check the token itself: Sanctum's `tokenCan()` is also true for session-cookie requests and for `*` tokens.
 For users who work without sending requests, add a route that only carries `UpdateLastSeenMiddleware` and let the front
 end call it on interaction.
@@ -144,6 +146,13 @@ callbacks and is not caught by the middleware. Prefer queued listeners, and queu
 the user key, `previousLastSeenAt` and `recordedAt` into `jobs` and `failed_jobs`, which `forgetLastSeenAt()` does not
 remove: set `$deleteWhenMissingModels = true` on them. There is no event for users who stop being recently seen.
 
+For inactive users, schedule a job (`Schedule::call(...)->daily()->name(...)->onOneServer()`) over
+`lastSeenBefore(now()->subDays(30))`, iterate with `lazyById()` (offset chunks skip rows whose filter column changes)
+and remind once per inactive period by storing the reminder time in an application column and only selecting rows
+where it is null or older than `last_seen_at` (`orWhereColumn`). For returning users, use a queued
+`LastSeenRecordedEvent` listener whose `shouldQueue()` compares `previousLastSeenAt` with `recordedAt`, and
+deduplicate with `Cache::add("...:{$event->user->getKey()}:{$event->recordedAt->getTimestamp()}", ...)`.
+
 ## Testing
 
 - Freeze or travel in time (`$this->travel(61)->seconds()`) to test the thresholds.
@@ -177,6 +186,7 @@ remove: set `$deleteWhenMissingModels = true` on them. There is no event for use
 - Calling `LastSeen::ignoreRequestsUsing()` during a request: the callback stays active for later requests in Octane and
   queue workers.
 - Ignoring Livewire's update route or `X-Livewire` header to stop polling: it also carries real user actions.
+- Ignoring Inertia prefetch requests (`Purpose: prefetch`): the later visit is served from the prefetch cache.
 - Doing heavy work in a `UserWasActiveEvent` listener, which runs on every request: use `LastSeenRecordedEvent`.
 - Calling `recentlySeen()` on users loaded with `select()` without `last_seen_at`: it returns `false`, or throws in
   strict mode.

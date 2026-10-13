@@ -11,6 +11,7 @@ use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use InvalidArgumentException;
 use LogicException;
 use RuntimeException;
@@ -477,3 +478,31 @@ it('records and checks activity when Date uses CarbonImmutable', function () {
         Date::useDefault();
     }
 });
+
+it('rejects an invalid threshold from the .env file instead of turning it into 0', function (string $variable, string $key) {
+    $configuration = withEnvironment([$variable => 'banana'], fn () => require __DIR__.'/../../config/last-seen.php');
+    config(['last-seen' => $configuration]);
+
+    $user = User::forceCreate(['email' => fake()->email(), 'last_seen_at' => now()->subHour()]);
+
+    expect($configuration[Str::after($key, 'last-seen.')])->toBe('banana')
+        ->and(fn () => LastSeen::record($user))->toThrow(InvalidArgumentException::class, $key)
+        ->and($user->fresh()->last_seen_at->toDateTimeString())->toBe(now()->subHour()->toDateTimeString());
+})->with([
+    'update threshold' => ['LAST_SEEN_UPDATE_THRESHOLD', 'last-seen.update_threshold'],
+    'recently seen threshold' => ['LAST_SEEN_RECENTLY_SEEN_THRESHOLD', 'last-seen.recently_seen_threshold'],
+]);
+
+it('reads the thresholds from the .env file as integers, and an empty value as the default', function (string $value, int $update, int $recentlySeen) {
+    $configuration = withEnvironment(
+        ['LAST_SEEN_UPDATE_THRESHOLD' => $value, 'LAST_SEEN_RECENTLY_SEEN_THRESHOLD' => $value],
+        fn () => require __DIR__.'/../../config/last-seen.php',
+    );
+
+    expect($configuration['update_threshold'])->toBe($update)
+        ->and($configuration['recently_seen_threshold'])->toBe($recentlySeen);
+})->with([
+    'digits' => ['15', 15, 15],
+    'zero' => ['0', 0, 0],
+    'empty' => ['', 60, 300],
+]);

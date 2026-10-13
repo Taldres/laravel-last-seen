@@ -27,7 +27,17 @@ All other settings—such as enabling/disabling the feature, update thresholds, 
 - `LAST_SEEN_UPDATE_THRESHOLD`: Minimum seconds between last_seen_at updates (default: 60)
 - `LAST_SEEN_RECENTLY_SEEN_THRESHOLD`: Seconds a user is considered recently seen after last activity (default: 300)
 
-Both thresholds must be integers of 0 or more. Other values throw an `InvalidArgumentException`.
+Both thresholds must be integers of 0 or more. Other values throw an `InvalidArgumentException`, also when they come
+from the `.env` file: `LAST_SEEN_UPDATE_THRESHOLD=banana` is rejected instead of being read as `0`. An entry without a
+value falls back to the default.
+
+If you published the configuration file before version 1.6.1, it still casts the `.env` values with `(int)`, which turns
+an invalid value into `0`. Publish it again with `--force`, or replace the casts with the calls from the current file:
+
+```php
+'update_threshold' => LastSeenDefaultThreshold::Update->fromEnv(env('LAST_SEEN_UPDATE_THRESHOLD')),
+'recently_seen_threshold' => LastSeenDefaultThreshold::RecentlySeen->fromEnv(env('LAST_SEEN_RECENTLY_SEEN_THRESHOLD')),
+```
 
 Each setting has a default value, so you only need to override them if you want to change the default behavior.
 

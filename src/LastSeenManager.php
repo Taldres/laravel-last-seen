@@ -8,6 +8,7 @@ use Carbon\CarbonInterface;
 use Closure;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Query\Builder as QueryBuilder;
+use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Event;
 use InvalidArgumentException;
@@ -22,6 +23,11 @@ class LastSeenManager
      * @var (Closure(Model): bool)|null
      */
     private ?Closure $trackUsing = null;
+
+    /**
+     * @var (Closure(Request): bool)|null
+     */
+    private ?Closure $ignoreRequestsUsing = null;
 
     /**
      * Writes last_seen_at if tracking is allowed and the update threshold has passed.
@@ -171,5 +177,26 @@ class LastSeenManager
     public function trackUsing(?Closure $callback): void
     {
         $this->trackUsing = $callback;
+    }
+
+    /**
+     * Determines whether the request is left out as activity: the callback registered with
+     * ignoreRequestsUsing() returned true for it.
+     */
+    public function shouldIgnoreRequest(Request $request): bool
+    {
+        return $this->ignoreRequestsUsing !== null && ($this->ignoreRequestsUsing)($request);
+    }
+
+    /**
+     * Registers a callback that decides per request whether it is left out as activity, for example
+     * a request that polls in the background. It runs for every request that passes the middleware,
+     * guests included, before the user is resolved.
+     *
+     * @param  (Closure(Request): bool)|null  $callback
+     */
+    public function ignoreRequestsUsing(?Closure $callback): void
+    {
+        $this->ignoreRequestsUsing = $callback;
     }
 }

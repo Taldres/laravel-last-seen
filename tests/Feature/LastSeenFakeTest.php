@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Taldres\LastSeen\Tests\Feature;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use PHPUnit\Framework\ExpectationFailedException;
 use ReflectionClass;
@@ -83,6 +84,29 @@ it('applies a trackUsing callback registered on the fake', function () {
 
     LastSeen::assertRecorded($tracked);
     LastSeen::assertNotRecorded($untracked);
+});
+
+it('keeps the ignoreRequestsUsing callback registered before faking', function () {
+    LastSeen::ignoreRequestsUsing(fn (Request $request): bool => $request->is('poll'));
+    LastSeen::fake();
+
+    expect(LastSeen::shouldIgnoreRequest(Request::create('/poll')))->toBeTrue()
+        ->and(LastSeen::shouldIgnoreRequest(Request::create('/page')))->toBeFalse();
+});
+
+it('applies an ignoreRequestsUsing callback registered on the fake', function () {
+    Route::get('/poll', fn () => 'poll')->middleware(UpdateLastSeenMiddleware::class);
+    Route::get('/page', fn () => 'page')->middleware(UpdateLastSeenMiddleware::class);
+    $user = TimestampedUser::create(['email' => fake()->email()]);
+
+    LastSeen::fake();
+    LastSeen::ignoreRequestsUsing(fn (Request $request): bool => $request->is('poll'));
+
+    $this->actingAs($user)->get('/poll')->assertOk();
+    LastSeen::assertNothingRecorded();
+
+    $this->actingAs($user)->get('/page')->assertOk();
+    LastSeen::assertRecordedTimes($user, 1);
 });
 
 it('records nothing when the package is disabled or the model is not tracked', function () {

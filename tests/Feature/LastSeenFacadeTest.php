@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Taldres\LastSeen\Tests\Feature;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Route;
 use ReflectionClass;
@@ -69,12 +70,20 @@ it('lets the middleware use a mocked facade', function () {
     Route::get('/mocked', fn () => 'ok')->middleware(UpdateLastSeenMiddleware::class);
     $user = TimestampedUser::create(['email' => fake()->email()]);
 
+    LastSeen::shouldReceive('shouldIgnoreRequest')->once()->andReturn(false);
     LastSeen::shouldReceive('shouldTrack')->once()->with($user)->andReturn(true);
     LastSeen::shouldReceive('record')->once()->with($user)->andReturn(true);
 
     $this->actingAs($user)->get('/mocked')->assertOk();
 
     expect($user->fresh()->last_seen_at)->toBeNull();
+});
+
+it('lets a spy leave requests alone and track no user', function () {
+    LastSeen::spy();
+
+    expect(LastSeen::shouldIgnoreRequest(Request::create('/last-seen')))->toBeFalse()
+        ->and(LastSeen::shouldTrack(TimestampedUser::create(['email' => fake()->email()])))->toBeFalse();
 });
 
 it('uses a swapped manager in the middleware, the listener and the trait', function () {

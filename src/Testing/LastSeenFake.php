@@ -7,6 +7,7 @@ namespace Taldres\LastSeen\Testing;
 use Carbon\CarbonInterface;
 use Closure;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Testing\Fakes\Fake;
 use PHPUnit\Framework\Assert as PHPUnit;
@@ -14,7 +15,7 @@ use Taldres\LastSeen\LastSeenManager;
 
 /**
  * Replaces the manager in tests. It writes nothing and ignores the update threshold, but keeps the
- * configuration and the trackUsing() callback of the real manager.
+ * configuration and the trackUsing() and ignoreRequestsUsing() callbacks of the real manager.
  */
 class LastSeenFake extends LastSeenManager implements Fake
 {
@@ -82,6 +83,19 @@ class LastSeenFake extends LastSeenManager implements Fake
     public function trackUsing(?Closure $callback): void
     {
         $this->manager->trackUsing($callback);
+    }
+
+    public function shouldIgnoreRequest(Request $request): bool
+    {
+        return $this->manager->shouldIgnoreRequest($request);
+    }
+
+    /**
+     * @param  (Closure(Request): bool)|null  $callback
+     */
+    public function ignoreRequestsUsing(?Closure $callback): void
+    {
+        $this->manager->ignoreRequestsUsing($callback);
     }
 
     /**

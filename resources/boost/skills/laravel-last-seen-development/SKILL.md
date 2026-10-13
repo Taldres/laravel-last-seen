@@ -1,6 +1,6 @@
 ---
 name: laravel-last-seen-development
-description: Track and query when users were last active with taldres/laravel-last-seen, including the last_seen_at column, recentlySeen(), the onlyRecentlySeen(), notRecentlySeen(), neverSeen() and lastSeenBefore() scopes, UpdateLastSeenMiddleware, the UserWasActiveEvent and LastSeenRecordedEvent events, the LastSeen facade, faking it in tests and opting users out.
+description: Track and query when users were last active with taldres/laravel-last-seen, including the last_seen_at column, recentlySeen(), ignoring background requests, the onlyRecentlySeen(), notRecentlySeen(), neverSeen() and lastSeenBefore() scopes, UpdateLastSeenMiddleware, the UserWasActiveEvent and LastSeenRecordedEvent events, the LastSeen facade, faking it in tests and opting users out.
 ---
 
 # Laravel Last Seen Development
@@ -89,6 +89,25 @@ The callback runs for every request of an authenticated user and once more when 
 queries. It also fits requests that are not the user's own activity, for example while someone impersonates the user:
 `fn (User $user): bool => ! session()->has('impersonator_id')`.
 
+## Choosing Which Requests Count
+
+Every request through the middleware counts, background polling included. Leave requests out with a callback that returns
+`true` for a request that does not count, registered once in a service provider's `boot()` method:
+
+```php
+LastSeen::ignoreRequestsUsing(fn (Request $request): bool => $request->is('api/notifications/poll'));
+```
+
+It runs after the request, so `$request->route()` is available (or `null` for an unmatched request), and before the
+middleware resolves the user: an ignored request skips that, the `trackUsing()` call and the `UserWasActiveEvent`. It
+runs for guests too, so keep it cheap. There is one callback: a second call replaces the first, so combine all conditions
+in one. An exception in it is reported and the request is not recorded. It only concerns the middleware, not
+`LastSeen::record()` or `updateLastSeenAt()`. A filter on Livewire's update route or header also drops real actions,
+because polls and actions share them: use a dedicated endpoint or a marker the application adds. For integrations with
+an API token, check the token itself: Sanctum's `tokenCan()` is also true for session-cookie requests and for `*` tokens.
+For users who work without sending requests, add a route that only carries `UpdateLastSeenMiddleware` and let the front
+end call it on interaction.
+
 ## Several User Models
 
 The published migration only adds `last_seen_at` to the table of `models.user`. Add the column to the table of every
@@ -99,7 +118,7 @@ middleware records the user of the guard that is authenticated after the request
 
 The middleware fires `Taldres\LastSeen\Events\UserWasActiveEvent` once per request for the user authenticated after the
 request, so logout requests are not recorded. Recording activity never fires it again. Exceptions from the guard, the
-`trackUsing()` callback and listeners are reported without changing the response.
+`trackUsing()` and `ignoreRequestsUsing()` callbacks and listeners are reported without changing the response.
 
 `Taldres\LastSeen\Events\LastSeenRecordedEvent` fires whenever `last_seen_at` was actually written (middleware,
 `updateLastSeenAt()` or `LastSeen::record()`), about once per user and update threshold. Use it instead of
@@ -125,13 +144,16 @@ the user key and `previousLastSeenAt` into `jobs` and `failed_jobs`, which `forg
 - Use `LastSeen::fake()` to stop all writes and assert with `assertRecorded($user)`, `assertRecordedTimes($user, 2)`,
   `assertNotRecorded($user)`, `assertNothingRecorded()`, `assertForgotten($user)`, `assertNotForgotten($user)` and
   `assertNothingForgotten()`. Each takes a model or a `fn (Model $user): bool` callback. The fake keeps the config and
-  the `trackUsing()` callback but ignores the update threshold, so every `record()` call for a tracked user counts.
+  the `trackUsing()` and `ignoreRequestsUsing()` callbacks but ignores the update threshold, so every `record()` call for a
+  tracked user counts.
 - Use `Event::fake([UserWasActiveEvent::class])` to assert activity detection without writes.
 - Use `Event::fake([LastSeenRecordedEvent::class])` to assert a write; the row is still written. `LastSeen::fake()`
   fires no `LastSeenRecordedEvent`, so dispatch it yourself to test listeners.
 - Disable tracking with `config(['last-seen.enabled' => false])` or `LastSeen::trackUsing(fn () => false)`.
-- Mock the facade with `LastSeen::partialMock()` or stub `shouldTrack()`. With `LastSeen::spy()`, `shouldTrack()`
-  returns `false` and nothing is recorded.
+- Mock the facade with `LastSeen::partialMock()`, or stub both `shouldIgnoreRequest()` and `shouldTrack()`: the middleware
+  calls the first for every request and a full mock reports the missing method instead of throwing, so an expectation on
+  `shouldTrack()` or `record()` is never met. With `LastSeen::spy()` both return
+  `false` and nothing is recorded.
 
 ## Anti-Patterns
 
@@ -145,7 +167,10 @@ the user key and `previousLastSeenAt` into `jobs` and `failed_jobs`, which `forg
 - Treating `last_seen_at` as exact: it can lag behind the latest request by up to the update threshold.
 - Setting the recently seen threshold below the update threshold: an active user then drops out of `onlyRecentlySeen()`
   between two writes.
-- Running queries in the `trackUsing()` callback, which runs on every request.
+- Running queries in the `trackUsing()` or `ignoreRequestsUsing()` callback, which run on every request.
+- Calling `LastSeen::ignoreRequestsUsing()` during a request: the callback stays active for later requests in Octane and
+  queue workers.
+- Ignoring Livewire's update route or `X-Livewire` header to stop polling: it also carries real user actions.
 - Doing heavy work in a `UserWasActiveEvent` listener, which runs on every request: use `LastSeenRecordedEvent`.
 - Calling `recentlySeen()` on users loaded with `select()` without `last_seen_at`: it returns `false`, or throws in
   strict mode.

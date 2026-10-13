@@ -15,6 +15,8 @@ use Taldres\LastSeen\Testing\LastSeenFake;
  * @method static \Carbon\CarbonInterface recentlySeenSince()
  * @method static bool shouldTrack(\Illuminate\Database\Eloquent\Model $user)
  * @method static void trackUsing(\Closure|null $callback)
+ * @method static bool shouldIgnoreRequest(\Illuminate\Http\Request $request)
+ * @method static void ignoreRequestsUsing(\Closure|null $callback)
  * @method static void assertRecorded(\Illuminate\Database\Eloquent\Model|\Closure $user)
  * @method static void assertRecordedTimes(\Illuminate\Database\Eloquent\Model|\Closure $user, int $times = 1)
  * @method static void assertNotRecorded(\Illuminate\Database\Eloquent\Model|\Closure $user)
@@ -32,7 +34,7 @@ class LastSeen extends Facade
 {
     /**
      * Replaces the manager with a fake that writes nothing and records which users were recorded
-     * or forgotten. The configuration and the trackUsing() callback still apply.
+     * or forgotten. The configuration and the trackUsing() and ignoreRequestsUsing() callbacks still apply.
      */
     public static function fake(): LastSeenFake
     {

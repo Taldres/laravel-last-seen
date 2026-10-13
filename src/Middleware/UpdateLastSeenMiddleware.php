@@ -23,6 +23,7 @@ class UpdateLastSeenMiddleware
      *
      * The user is resolved after the request has been handled, so authentication middleware
      * that runs later in the stack (e.g. route-level `auth:sanctum`) has already taken effect.
+     * A request that the ignoreRequestsUsing() callback rejects does not even resolve the user.
      *
      * @param  Closure(Request): (Response)  $next
      */
@@ -37,6 +38,10 @@ class UpdateLastSeenMiddleware
         $request->attributes->set('last-seen.handled', true);
 
         try {
+            if ($this->lastSeen->shouldIgnoreRequest($request)) {
+                return $response;
+            }
+
             $user = Auth::user();
 
             if ($user instanceof Model && $user->exists && $this->lastSeen->shouldTrack($user)) {

@@ -8,7 +8,8 @@ Rules for AI coding agents working in this repository.
   PHPStan, the code style check, type coverage and the Pest suite without changing files.
 - Every commit must pass `composer test` on its own.
 - When the public API, configuration or setup changes, update the Laravel Boost skill in
-  `resources/boost/skills/laravel-last-seen-development/SKILL.md` and the README in the same change.
+  `resources/boost/skills/laravel-last-seen-development/SKILL.md` and the documentation in `docs/` in the same change.
+  The README repeats the installation and a quick start, so update it too when those change.
 
 ## Branches
 

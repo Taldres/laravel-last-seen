@@ -372,6 +372,43 @@ it('queues a listener only when the user became recently seen', function () {
     }
 });
 
+it('hands the listener the row that was written when the key was changed in memory', function () {
+    $recorded = null;
+    Event::listen(LastSeenRecordedEvent::class, function (LastSeenRecordedEvent $event) use (&$recorded) {
+        $recorded = $event;
+    });
+
+    $user = User::create(['email' => fake()->email()]);
+    $other = User::create(['email' => fake()->email()]);
+    $originalId = $user->id;
+    $user->id = $other->id;
+
+    LastSeen::record($user);
+    $restored = unserialize(serialize($recorded));
+
+    expect($recorded->user->getKey())->toBe($originalId)
+        ->and($recorded->user->last_seen_at)->not->toBeNull()
+        ->and($restored->user->getKey())->toBe($originalId)
+        ->and($user->id)->toBe($other->id)
+        ->and($other->fresh()->last_seen_at)->toBeNull();
+});
+
+it('hands the listener the model itself when it was hydrated by hand without an original key', function () {
+    $recorded = null;
+    Event::listen(LastSeenRecordedEvent::class, function (LastSeenRecordedEvent $event) use (&$recorded) {
+        $recorded = $event;
+    });
+
+    $id = User::create(['email' => fake()->email()])->id;
+    $user = (new User)->forceFill(['id' => $id]);
+    $user->exists = true;
+
+    expect(LastSeen::record($user))->toBeTrue()
+        ->and($recorded->user)->toBe($user)
+        ->and($recorded->user->getKey())->toBe($id)
+        ->and(unserialize(serialize($recorded))->user->getKey())->toBe($id);
+});
+
 it('keeps the previous and the written value when the event is serialized', function () {
     $user = User::forceCreate(['email' => fake()->email(), 'last_seen_at' => '2026-10-06 11:00:00']);
 

@@ -62,6 +62,7 @@ class LastSeenManager
         $timestamp = $user->freshTimestamp();
         $now = $this->storable($user, $timestamp);
         $outdated = $this->storable($user, $timestamp->copy()->subSeconds($threshold));
+        $key = $this->originalKey($user);
         // Only the future value this model read is replaced. A newer value that a parallel request wrote in the
         // meantime is also later than this request's timestamp, and must stay.
         $future = $lastSeenAt instanceof CarbonInterface && $lastSeenAt->isFuture()
@@ -73,7 +74,7 @@ class LastSeenManager
         // query, so parallel requests write only once. With a threshold of 0, a row that
         // already holds the current timestamp is left alone.
         $written = $user->newModelQuery()
-            ->whereKey($this->originalKey($user))
+            ->whereKey($key)
             ->toBase()
             ->where(fn (QueryBuilder $query) => $query
                 ->whereNull('last_seen_at')
@@ -84,8 +85,27 @@ class LastSeenManager
         if ($written) {
             $user->forceFill(['last_seen_at' => $timestamp])->syncOriginalAttribute('last_seen_at');
 
-            Event::dispatch(new LastSeenRecordedEvent($user, $previous, $becameRecentlySeen, $this->recordedAt($user, $now, $timestamp)));
+            Event::dispatch(new LastSeenRecordedEvent($this->writtenUser($user, $key), $previous, $becameRecentlySeen, $this->recordedAt($user, $now, $timestamp)));
         }
+
+        return $written;
+    }
+
+    /**
+     * The user whose row was written. When the key was changed in memory, the row of the original key was written,
+     * so the event gets a copy that carries that key, and a queued listener reloads the right user. A model without
+     * an original key, such as one hydrated by hand, was written under its current key and is passed on as it is.
+     */
+    private function writtenUser(Model $user, mixed $key): Model
+    {
+        $keyName = $user->getKeyName();
+
+        if ($user->getRawOriginal($keyName) === null || ! $user->isDirty($keyName)) {
+            return $user;
+        }
+
+        $written = clone $user;
+        $written->setAttribute($keyName, $key);
 
         return $written;
     }

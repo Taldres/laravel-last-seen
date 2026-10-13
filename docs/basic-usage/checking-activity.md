@@ -28,7 +28,9 @@ A moment is compared in the precision of the stored column. With whole seconds, 
 not include a user who was recorded within the current second, while `lastSeenSince(now())` does.
 
 A `last_seen_at` in the future, e.g. caused by clock drift between servers, counts as recently seen until the next
-recorded activity replaces it.
+recorded activity replaces it. Only a model that read that future value replaces it, so a newer value that a parallel
+request wrote is never overwritten. A model loaded without `last_seen_at` writes again once the future value has
+passed.
 
 Keep `app.timezone` on UTC. With another timezone, `last_seen_at` is stored as local time, which is ambiguous for an hour
 when daylight saving time ends, just like Laravel's own timestamps.

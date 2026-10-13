@@ -62,6 +62,11 @@ class LastSeenManager
         $timestamp = $user->freshTimestamp();
         $now = $this->storable($user, $timestamp);
         $outdated = $this->storable($user, $timestamp->copy()->subSeconds($threshold));
+        // Only the future value this model read is replaced. A newer value that a parallel request wrote in the
+        // meantime is also later than this request's timestamp, and must stay.
+        $future = $lastSeenAt instanceof CarbonInterface && $lastSeenAt->isFuture()
+            ? ($user->isDirty('last_seen_at') ? null : $user->getRawOriginal('last_seen_at')) ?? $this->storable($user, $lastSeenAt)
+            : null;
 
         // Write only last_seen_at through the base query builder, so updated_at, model events
         // and other unsaved attributes stay untouched. The threshold is checked again in the
@@ -73,7 +78,7 @@ class LastSeenManager
             ->where(fn (QueryBuilder $query) => $query
                 ->whereNull('last_seen_at')
                 ->orWhere('last_seen_at', $threshold > 0 ? '<=' : '<', $outdated)
-                ->orWhere('last_seen_at', '>', $now))
+                ->when($future !== null, fn (QueryBuilder $query) => $query->orWhere('last_seen_at', $future)))
             ->update(['last_seen_at' => $now]) > 0;
 
         if ($written) {

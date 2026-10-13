@@ -97,7 +97,7 @@ it('fires the event only for the request that wins the race', function () {
     Event::assertDispatchedTimes(LastSeenRecordedEvent::class, 1);
 });
 
-it('reports the previous value and whether the user came online', function (?string $previous, bool $cameOnline) {
+it('reports the previous value and whether the user became recently seen', function (?string $previous, bool $becameRecentlySeen) {
     $this->travelTo(Carbon::parse('2026-10-06 12:10:00'));
     $recorded = null;
     Event::listen(LastSeenRecordedEvent::class, function (LastSeenRecordedEvent $event) use (&$recorded) {
@@ -109,7 +109,7 @@ it('reports the previous value and whether the user came online', function (?str
     expect(LastSeen::record($user))->toBeTrue()
         ->and($recorded)->toBeInstanceOf(LastSeenRecordedEvent::class)
         ->and($recorded->previousLastSeenAt?->format('Y-m-d H:i:s'))->toBe($previous)
-        ->and($recorded->cameOnline)->toBe($cameOnline);
+        ->and($recorded->becameRecentlySeen)->toBe($becameRecentlySeen);
 })->with([
     'never seen' => [null, true],
     'older than the recently seen threshold' => ['2026-10-06 12:00:00', true],
@@ -128,7 +128,7 @@ it('treats a model that was just created as never seen', function () {
     LastSeen::record(User::create(['email' => fake()->email()]));
 
     expect($recorded->previousLastSeenAt)->toBeNull()
-        ->and($recorded->cameOnline)->toBeTrue();
+        ->and($recorded->becameRecentlySeen)->toBeTrue();
 });
 
 it('reports an unknown previous value for a model loaded without last_seen_at', function (bool $strict) {
@@ -146,7 +146,7 @@ it('reports an unknown previous value for a model loaded without last_seen_at', 
         expect(LastSeen::record($partial))->toBeTrue()
             ->and($recorded->user)->toBe($partial)
             ->and($recorded->previousLastSeenAt)->toBeNull()
-            ->and($recorded->cameOnline)->toBeFalse()
+            ->and($recorded->becameRecentlySeen)->toBeFalse()
             ->and($user->fresh()->last_seen_at)->not->toBeNull();
     } finally {
         Model::preventAccessingMissingAttributes(false);
@@ -166,14 +166,14 @@ it('reports an unknown previous value when the cast does not return a Carbon ins
 
     expect(LastSeen::record($user))->toBeTrue()
         ->and($recorded->previousLastSeenAt)->toBeNull()
-        ->and($recorded->cameOnline)->toBeFalse();
+        ->and($recorded->becameRecentlySeen)->toBeFalse();
 });
 
-it('counts every write as coming online when the recently seen threshold is below the update threshold', function () {
+it('marks every write as becoming recently seen when the recently seen threshold is below the update threshold', function () {
     config(['last-seen.update_threshold' => 60, 'last-seen.recently_seen_threshold' => 30]);
-    $cameOnline = [];
-    Event::listen(LastSeenRecordedEvent::class, function (LastSeenRecordedEvent $event) use (&$cameOnline) {
-        $cameOnline[] = $event->cameOnline;
+    $becameRecentlySeen = [];
+    Event::listen(LastSeenRecordedEvent::class, function (LastSeenRecordedEvent $event) use (&$becameRecentlySeen) {
+        $becameRecentlySeen[] = $event->becameRecentlySeen;
     });
 
     $user = User::create(['email' => fake()->email()]);
@@ -182,7 +182,7 @@ it('counts every write as coming online when the recently seen threshold is belo
     $this->travel(61)->seconds();
     LastSeen::record($user);
 
-    expect($cameOnline)->toBe([true, true]);
+    expect($becameRecentlySeen)->toBe([true, true]);
 });
 
 it('hands the listener the model that was just recorded', function () {
@@ -270,24 +270,24 @@ it('reports a failing listener and keeps the response of the request', function 
     Exceptions::assertReported(fn (RuntimeException $exception) => $exception->getMessage() === 'listener failed');
 });
 
-it('queues a listener only when the user came online', function () {
+it('queues a listener only when the user became recently seen', function () {
     $this->travelTo(Carbon::parse('2026-10-06 12:10:00'));
     QueuedRecordedListener::$events = [];
     Event::listen(LastSeenRecordedEvent::class, QueuedRecordedListener::class);
 
-    $online = User::create(['email' => fake()->email()]);
+    $neverSeen = User::create(['email' => fake()->email()]);
     $active = User::forceCreate(['email' => fake()->email(), 'last_seen_at' => '2026-10-06 12:08:00'])->fresh();
 
     try {
-        LastSeen::record($online);
+        LastSeen::record($neverSeen);
         LastSeen::record($active);
 
         expect(QueuedRecordedListener::$events)->toHaveCount(1)
-            ->and(QueuedRecordedListener::$events[0]->user)->not->toBe($online)
-            ->and(QueuedRecordedListener::$events[0]->user->is($online))->toBeTrue()
+            ->and(QueuedRecordedListener::$events[0]->user)->not->toBe($neverSeen)
+            ->and(QueuedRecordedListener::$events[0]->user->is($neverSeen))->toBeTrue()
             ->and(QueuedRecordedListener::$events[0]->user->last_seen_at?->toDateTimeString())->toBe('2026-10-06 12:10:00')
             ->and(QueuedRecordedListener::$events[0]->previousLastSeenAt)->toBeNull()
-            ->and(QueuedRecordedListener::$events[0]->cameOnline)->toBeTrue();
+            ->and(QueuedRecordedListener::$events[0]->becameRecentlySeen)->toBeTrue();
     } finally {
         QueuedRecordedListener::$events = [];
     }
@@ -300,7 +300,7 @@ it('keeps the previous value when the event is serialized', function () {
 
     expect($restored->user->is($user))->toBeTrue()
         ->and($restored->previousLastSeenAt?->toDateTimeString())->toBe('2026-10-06 11:00:00')
-        ->and($restored->cameOnline)->toBeTrue();
+        ->and($restored->becameRecentlySeen)->toBeTrue();
 });
 
 it('fires the event while the write still happens under Event::fake()', function () {

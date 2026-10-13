@@ -12,10 +12,10 @@ use Illuminate\Queue\SerializesModels;
 
 /**
  * Fired when last_seen_at was actually written, in contrast to UserWasActiveEvent, which fires for every
- * request. $previousLastSeenAt is the value the model held before the write. $cameOnline is true when the
+ * request. $previousLastSeenAt is the value the model held before the write. $becameRecentlySeen is true when the
  * user was not recently seen before, which includes users who were never seen and models that were just
  * created. When the model was loaded without last_seen_at, or a cast does not return a date object, the
- * previous value is unknown: it is null and $cameOnline is false.
+ * previous value is unknown: it is null and $becameRecentlySeen is false.
  */
 class LastSeenRecordedEvent implements ShouldDispatchAfterCommit
 {
@@ -24,6 +24,6 @@ class LastSeenRecordedEvent implements ShouldDispatchAfterCommit
     public function __construct(
         public readonly Model $user,
         public readonly ?CarbonInterface $previousLastSeenAt,
-        public readonly bool $cameOnline,
+        public readonly bool $becameRecentlySeen,
     ) {}
 }

@@ -49,7 +49,7 @@ class LastSeenManager
         }
 
         // An invalid recently seen threshold has to fail before the row is written.
-        [$previous, $cameOnline] = $this->previousActivity($known, $lastSeenAt, $this->recentlySeenSince());
+        [$previous, $becameRecentlySeen] = $this->previousActivity($known, $lastSeenAt, $this->recentlySeenSince());
 
         $timestamp = $user->freshTimestamp();
         $now = $this->storable($user, $timestamp);
@@ -71,14 +71,14 @@ class LastSeenManager
         if ($written) {
             $user->forceFill(['last_seen_at' => $timestamp])->syncOriginalAttribute('last_seen_at');
 
-            Event::dispatch(new LastSeenRecordedEvent($user, $previous, $cameOnline));
+            Event::dispatch(new LastSeenRecordedEvent($user, $previous, $becameRecentlySeen));
         }
 
         return $written;
     }
 
     /**
-     * The value the model held and whether it came online. A model loaded without last_seen_at has an unknown
+     * The value the model held and whether the user was not recently seen before. A model loaded without last_seen_at has an unknown
      * value: it claims no transition it did not observe.
      *
      * @return array{0: CarbonInterface|null, 1: bool}

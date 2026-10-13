@@ -197,7 +197,10 @@ it('reports a written value that equals the stored timestamp', function () {
     $user = User::create(['email' => fake()->email()]);
     LastSeen::record($user);
 
-    expect($recorded->recordedAt->format('Y-m-d H:i:s.u'))->toBe('2026-10-06 12:00:00.000000')
+    // SQL Server keeps milliseconds in the date format, the other databases whole seconds.
+    $stored = Carbon::createFromFormat($user->getDateFormat(), now()->format($user->getDateFormat()));
+
+    expect($recorded->recordedAt->format('Y-m-d H:i:s.u'))->toBe($stored?->format('Y-m-d H:i:s.u'))
         ->and($recorded->recordedAt->eq($user->last_seen_at))->toBeTrue()
         ->and($recorded->recordedAt->eq($user->fresh()->last_seen_at))->toBeTrue();
 });

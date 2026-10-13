@@ -535,14 +535,15 @@ it('records and checks activity when Date uses CarbonImmutable', function () {
 });
 
 it('rejects an invalid threshold from the .env file instead of turning it into 0', function (string $variable, string $key) {
+    $this->travelTo(Carbon::parse('2026-10-06 12:00:00'));
     $configuration = withEnvironment([$variable => 'banana'], fn () => require __DIR__.'/../../config/last-seen.php');
     config(['last-seen' => $configuration]);
 
-    $user = User::forceCreate(['email' => fake()->email(), 'last_seen_at' => now()->subHour()]);
+    $user = User::forceCreate(['email' => fake()->email(), 'last_seen_at' => '2026-10-06 11:00:00']);
 
     expect($configuration[Str::after($key, 'last-seen.')])->toBe('banana')
         ->and(fn () => LastSeen::record($user))->toThrow(InvalidArgumentException::class, $key)
-        ->and($user->fresh()->last_seen_at->toDateTimeString())->toBe(now()->subHour()->toDateTimeString());
+        ->and($user->fresh()->last_seen_at->toDateTimeString())->toBe('2026-10-06 11:00:00');
 })->with([
     'update threshold' => ['LAST_SEEN_UPDATE_THRESHOLD', 'last-seen.update_threshold'],
     'recently seen threshold' => ['LAST_SEEN_RECENTLY_SEEN_THRESHOLD', 'last-seen.recently_seen_threshold'],

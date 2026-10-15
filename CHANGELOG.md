@@ -2,6 +2,17 @@
 
 All notable changes to `laravel-last-seen` will be documented in this file
 
+## v1.6.2 - 2026-10-15
+
+<!-- Release notes generated using configuration in .github/release.yml at main -->
+### What's Changed
+
+#### Maintenance
+
+* chore: align code and tooling with Laravel conventions by @Taldres in https://github.com/Taldres/laravel-last-seen/pull/39
+
+**Full Changelog**: https://github.com/Taldres/laravel-last-seen/compare/v1.6.1...v1.6.2
+
 ## v1.6.1 - 2026-10-13
 
 <!-- Release notes generated using configuration in .github/release.yml at main -->

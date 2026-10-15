@@ -384,7 +384,8 @@ it('throws for an update threshold that is not an integer', function (mixed $val
     expect(fn () => LastSeen::record($user))
         ->toThrow(InvalidArgumentException::class, 'last-seen.update_threshold');
 })->with([
-    'numeric string' => '60',
+    'text' => 'sixty',
+    'signed string' => '-1',
     'float' => 60.0,
     'null' => null,
     'boolean' => true,
@@ -400,7 +401,8 @@ it('throws for a recently seen threshold that is not an integer', function (mixe
         ->and(fn () => User::onlyRecentlySeen()->get())
         ->toThrow(InvalidArgumentException::class, 'last-seen.recently_seen_threshold');
 })->with([
-    'numeric string' => '300',
+    'text' => 'five',
+    'decimal string' => '1.5',
     'null' => null,
 ]);
 
@@ -549,16 +551,27 @@ it('rejects an invalid threshold from the .env file instead of turning it into 0
     'recently seen threshold' => ['LAST_SEEN_RECENTLY_SEEN_THRESHOLD', 'last-seen.recently_seen_threshold'],
 ]);
 
-it('reads the thresholds from the .env file as integers, and an empty value as the default', function (string $value, int $update, int $recentlySeen) {
+it('reads the thresholds from the .env file, and an empty value as the default', function (string $value, int $update, int $recentlySeen) {
+    $this->travelTo(Carbon::parse('2026-10-06 12:00:00'));
     $configuration = withEnvironment(
         ['LAST_SEEN_UPDATE_THRESHOLD' => $value, 'LAST_SEEN_RECENTLY_SEEN_THRESHOLD' => $value],
         fn () => require __DIR__.'/../../config/last-seen.php',
     );
+    config(['last-seen' => $configuration]);
 
-    expect($configuration['update_threshold'])->toBe($update)
-        ->and($configuration['recently_seen_threshold'])->toBe($recentlySeen);
+    $user = User::forceCreate(['email' => fake()->email(), 'last_seen_at' => '2026-10-06 11:59:30']);
+
+    expect(LastSeen::recentlySeenSince()->toDateTimeString())->toBe(Carbon::now()->subSeconds($recentlySeen)->toDateTimeString())
+        ->and(LastSeen::record($user))->toBe($update <= 30);
 })->with([
     'digits' => ['15', 15, 15],
     'zero' => ['0', 0, 0],
     'empty' => ['', 60, 300],
 ]);
+
+it('accepts a configuration published with 1.6.1, which converts the .env values itself', function () {
+    $this->travelTo(Carbon::parse('2026-10-06 12:00:00'));
+    config(['last-seen.update_threshold' => LastSeenDefaultThreshold::Update->fromEnv('15'), 'last-seen.recently_seen_threshold' => LastSeenDefaultThreshold::RecentlySeen->fromEnv(null)]);
+
+    expect(LastSeen::recentlySeenSince()->toDateTimeString())->toBe(Carbon::now()->subSeconds(300)->startOfSecond()->toDateTimeString());
+});

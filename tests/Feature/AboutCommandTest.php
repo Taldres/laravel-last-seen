@@ -122,5 +122,11 @@ it('marks invalid thresholds without failing', function (mixed $update, mixed $r
         ->and(substr_count(aboutLastSeenForConsole(), 'INVALID'))->toBe(2);
 })->with([
     'negative' => [-1, -5],
-    'not an integer' => ['60', null],
+    'not an integer' => ['banana', null],
 ]);
+
+it('reads a threshold that is still a string of digits', function () {
+    config(['last-seen.update_threshold' => '90', 'last-seen.recently_seen_threshold' => '600']);
+
+    expect(aboutLastSeenForConsole())->toContain('90 seconds')->toContain('600 seconds')->not->toContain('INVALID');
+});

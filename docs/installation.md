@@ -101,5 +101,5 @@ Do these steps before you run `composer remove taldres/laravel-last-seen`:
 2. Delete the published migration file. After the package is removed, `php artisan migrate` on a fresh database fails
    with it. If you keep the column, add a migration of your own for it.
 3. Remove the `LastSeen` trait from your user model and the middleware from `bootstrap/app.php`.
-4. Delete `config/last-seen.php` if you published it. It calls a class of the package, so the application cannot boot
-   without the package while the file exists.
+4. Delete `config/last-seen.php` if you published it. Files published with 1.6.1 or 1.6.2 call a class of the package, so the
+   application cannot boot without the package while such a file exists.

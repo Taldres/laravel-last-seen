@@ -3,23 +3,16 @@
 If necessary or in case of a newer version, you can publish the configuration file to customize the package settings:
 
 ```bash
-php artisan vendor:publish --tag=last-seen-config
+php artisan vendor:publish --provider="Taldres\LastSeen\LastSeenServiceProvider" --tag=last-seen-config
 ```
 
 or this command to force overwrite the existing configuration file:
 
 ```bash
-php artisan vendor:publish --tag=last-seen-config --force
+php artisan vendor:publish --provider="Taldres\LastSeen\LastSeenServiceProvider" --tag=last-seen-config --force
 ```
 
-Tags are shared by all packages. If another package registers the same tag, name the provider as well, which publishes
-only the files of this package:
-
-```bash
-php artisan vendor:publish --provider="Taldres\LastSeen\LastSeenServiceProvider" --tag=last-seen-config
-```
-
-The same works for the `last-seen-migrations` tag.
+The provider limits the command to the files of this package, because tags are shared by all packages.
 
 Run `php artisan config:clear` afterwards if your configuration is cached.
 

@@ -69,7 +69,7 @@ The test suite runs against SQLite, MySQL, MariaDB, PostgreSQL and SQL Server. S
 2. Publish the migration:
 
     ```bash
-    php artisan vendor:publish --tag=last-seen-migrations
+    php artisan vendor:publish --provider="Taldres\LastSeen\LastSeenServiceProvider" --tag=last-seen-migrations
     ```
 
    The migration finds your users table through the `models.user` setting. You only need to publish the configuration

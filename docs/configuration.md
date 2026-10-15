@@ -3,14 +3,23 @@
 If necessary or in case of a newer version, you can publish the configuration file to customize the package settings:
 
 ```bash
-php artisan vendor:publish --provider="Taldres\LastSeen\LastSeenServiceProvider" --tag="config"
-
+php artisan vendor:publish --tag=last-seen-config
 ```
+
 or this command to force overwrite the existing configuration file:
 
 ```bash
-php artisan vendor:publish --provider="Taldres\LastSeen\LastSeenServiceProvider" --tag="config" --force
+php artisan vendor:publish --tag=last-seen-config --force
 ```
+
+Tags are shared by all packages. If another package registers the same tag, name the provider as well, which publishes
+only the files of this package:
+
+```bash
+php artisan vendor:publish --provider="Taldres\LastSeen\LastSeenServiceProvider" --tag=last-seen-config
+```
+
+The same works for the `last-seen-migrations` tag.
 
 Run `php artisan config:clear` afterwards if your configuration is cached.
 
@@ -23,7 +32,7 @@ In the `config/last-seen.php` file, you can specify the User model:
 
 All other settings—such as enabling/disabling the feature, update thresholds, and recently seen thresholds—can be controlled via environment variables in your `.env` file:
 
-- `LAST_SEEN_ENABLED`: Enables or disables the package globally (default: true). It affects only the `updateLastSeenAt` method and the middleware.
+- `LAST_SEEN_ENABLED`: Enables or disables the package globally (default: true). While it is off, `updateLastSeenAt()`, `LastSeen::record()` and the middleware write nothing. `forgetLastSeenAt()`, the scopes and `recentlySeen()` keep working.
 - `LAST_SEEN_UPDATE_THRESHOLD`: Minimum seconds between last_seen_at updates (default: 60)
 - `LAST_SEEN_RECENTLY_SEEN_THRESHOLD`: Seconds a user is considered recently seen after last activity (default: 300)
 

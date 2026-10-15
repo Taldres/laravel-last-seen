@@ -129,7 +129,7 @@ The test suite runs against SQLite, MySQL, MariaDB, PostgreSQL and SQL Server. S
 
 All settings have defaults and can be changed in your `.env` file:
 
-- `LAST_SEEN_ENABLED`: Enables or disables the package globally (default: true). It affects only the `updateLastSeenAt` method and the middleware.
+- `LAST_SEEN_ENABLED`: Enables or disables the package globally (default: true). While it is off, `updateLastSeenAt()`, `LastSeen::record()` and the middleware write nothing. `forgetLastSeenAt()`, the scopes and `recentlySeen()` keep working.
 - `LAST_SEEN_UPDATE_THRESHOLD`: Minimum seconds between last_seen_at updates (default: 60)
 - `LAST_SEEN_RECENTLY_SEEN_THRESHOLD`: Seconds a user is considered recently seen after last activity (default: 300)
 

@@ -8,7 +8,6 @@ use Closure;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Event;
 use Symfony\Component\HttpFoundation\Response;
 use Taldres\LastSeen\Events\UserWasActiveEvent;
 use Taldres\LastSeen\LastSeenManager;
@@ -45,7 +44,7 @@ class UpdateLastSeenMiddleware
             $user = Auth::user();
 
             if ($user instanceof Model && $user->exists && $this->lastSeen->shouldTrack($user)) {
-                Event::dispatch(new UserWasActiveEvent($user));
+                UserWasActiveEvent::dispatch($user);
             }
         } catch (Throwable $exception) {
             report($exception);

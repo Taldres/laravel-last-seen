@@ -10,6 +10,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
+use Taldres\LastSeen\Console\ForgetCommand;
 use Taldres\LastSeen\Enums\LastSeenDefaultThreshold;
 use Taldres\LastSeen\Listeners\LastSeenSubscriber;
 use Taldres\LastSeen\Trait\LastSeen;
@@ -21,6 +22,7 @@ class LastSeenServiceProvider extends ServiceProvider
     {
         $this->providePublishing();
         $this->provideAboutSection();
+        $this->provideCommands();
 
         Event::subscribe(LastSeenSubscriber::class);
     }
@@ -51,6 +53,13 @@ class LastSeenServiceProvider extends ServiceProvider
             if ($seconds !== null && $seconds !== $value) {
                 config(["last-seen.{$key}" => $seconds]);
             }
+        }
+    }
+
+    private function provideCommands(): void
+    {
+        if ($this->app->runningInConsole()) {
+            $this->commands([ForgetCommand::class]);
         }
     }
 

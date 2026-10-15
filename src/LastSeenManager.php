@@ -12,7 +12,6 @@ use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Date;
-use Illuminate\Support\Facades\Event;
 use InvalidArgumentException;
 use LogicException;
 use Taldres\LastSeen\Enums\LastSeenDefaultThreshold;
@@ -85,7 +84,7 @@ class LastSeenManager
         if ($written) {
             $user->forceFill(['last_seen_at' => $timestamp])->syncOriginalAttribute('last_seen_at');
 
-            Event::dispatch(new LastSeenRecordedEvent($this->writtenUser($user, $key), $previous, $becameRecentlySeen, $this->recordedAt($user, $now, $timestamp)));
+            LastSeenRecordedEvent::dispatch($this->writtenUser($user, $key), $previous, $becameRecentlySeen, $this->recordedAt($user, $now, $timestamp));
         }
 
         return $written;

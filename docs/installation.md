@@ -36,7 +36,7 @@ database accepts it in a `datetime` column. MySQL before 8.0.19, MariaDB and SQL
 2. Publish the migration:
 
     ```bash
-    php artisan vendor:publish --tag=last-seen-migrations
+    php artisan vendor:publish --provider="Taldres\LastSeen\LastSeenServiceProvider" --tag=last-seen-migrations
     ```
 
    The migration finds your users table through the `models.user` setting. You only need to publish the configuration
@@ -91,3 +91,15 @@ database accepts it in a `datetime` column. MySQL before 8.0.19, MariaDB and SQL
    The "Last Seen" section shows whether the package is enabled, the user model and whether it uses the trait, and both
    thresholds. It marks a missing trait, an invalid threshold and a recently seen threshold that is not above the update
    threshold.
+
+## Removing the Package
+
+Do these steps before you run `composer remove taldres/laravel-last-seen`:
+
+1. Roll back the published migration if you want to drop the `last_seen_at` column. Its `down()` method reads the
+   user model from the package configuration, so it cannot run once the package is gone.
+2. Delete the published migration file. After the package is removed, `php artisan migrate` on a fresh database fails
+   with it. If you keep the column, add a migration of your own for it.
+3. Remove the `LastSeen` trait from your user model and the middleware from `bootstrap/app.php`.
+4. Delete `config/last-seen.php` if you published it. It calls a class of the package, so the application cannot boot
+   without the package while the file exists.

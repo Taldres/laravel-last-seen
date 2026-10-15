@@ -13,10 +13,5 @@ class UserWasActiveEvent
 {
     use Dispatchable, SerializesModels;
 
-    public Model|Authenticatable $user;
-
-    public function __construct(Model|Authenticatable $user)
-    {
-        $this->user = $user;
-    }
+    public function __construct(public Model|Authenticatable $user) {}
 }

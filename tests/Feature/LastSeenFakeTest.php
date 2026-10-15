@@ -195,3 +195,13 @@ it('documents every public fake method on the facade', function () {
     expect($methods)->not->toBeEmpty()
         ->each(fn ($method) => expect($docComment)->toMatch('/@method\s+static\s+\S+\s+'.$method->value.'\(/'));
 });
+
+it('overrides every public manager method in the fake', function () {
+    $inherited = collect((new ReflectionClass(LastSeenFake::class))->getMethods(ReflectionMethod::IS_PUBLIC))
+        ->reject(fn (ReflectionMethod $method) => $method->isConstructor() || $method->isStatic())
+        ->filter(fn (ReflectionMethod $method) => $method->getDeclaringClass()->getName() === LastSeenManager::class)
+        ->map(fn (ReflectionMethod $method) => $method->getName())
+        ->values();
+
+    expect($inherited->all())->toBe([]);
+});

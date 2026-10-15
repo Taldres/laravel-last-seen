@@ -9,6 +9,7 @@ use Illuminate\Foundation\Console\AboutCommand;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Str;
 use Taldres\LastSeen\Listeners\LastSeenSubscriber;
 use Taldres\LastSeen\Trait\LastSeen;
 use Throwable;
@@ -36,10 +37,6 @@ class LastSeenServiceProvider extends ServiceProvider
     private function providePublishing(): void
     {
         if (! $this->app->runningInConsole()) {
-            return;
-        }
-
-        if (! function_exists('config_path')) {
             return;
         }
 
@@ -119,10 +116,10 @@ class LastSeenServiceProvider extends ServiceProvider
         $directory = $this->app->databasePath('migrations');
         $files = is_dir($directory) ? scandir($directory) : false;
 
-        $published = Collection::make($files ?: [])->first(fn (string $file) => preg_match(
+        $published = Collection::make($files ?: [])->first(fn (string $file) => Str::isMatch(
             '/^\d{4}_\d{2}_\d{2}_\d{6}_'.preg_quote($migrationFileName, '/').'$/',
             $file,
-        ) === 1);
+        ));
 
         return $directory.DIRECTORY_SEPARATOR.($published ?? now()->format('Y_m_d_His').'_'.$migrationFileName);
     }

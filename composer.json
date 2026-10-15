@@ -60,8 +60,7 @@
   "config": {
     "sort-packages": true,
     "allow-plugins": {
-      "pestphp/pest-plugin": true,
-      "larastan/larastan": true
+      "pestphp/pest-plugin": true
     }
   },
   "minimum-stability": "stable",

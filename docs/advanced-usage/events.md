@@ -72,7 +72,6 @@ You can also dispatch the `UserWasActiveEvent` from your own application code:
 
 ```php
 use Taldres\LastSeen\Events\UserWasActiveEvent;
-use Illuminate\Support\Facades\Event;
 
-Event::dispatch(new UserWasActiveEvent($user));
+UserWasActiveEvent::dispatch($user);
 ```

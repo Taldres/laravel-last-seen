@@ -11,7 +11,7 @@
 .gitignore export-ignore
 CHANGELOG.md export-ignore
 UPGRADE.md export-ignore
-phpunit.xml export-ignore
+phpunit.xml.dist export-ignore
 phpstan.neon.dist export-ignore
 pint.json export-ignore
 AGENTS.md export-ignore

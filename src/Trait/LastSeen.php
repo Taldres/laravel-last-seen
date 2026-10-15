@@ -7,6 +7,7 @@ namespace Taldres\LastSeen\Trait;
 use DateTimeInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Date;
 use Taldres\LastSeen\LastSeenManager;
@@ -20,7 +21,7 @@ trait LastSeen
 {
     public function initializeLastSeen(): void
     {
-        if (! array_key_exists('last_seen_at', $this->casts)) {
+        if (! Arr::exists($this->casts, 'last_seen_at')) {
             $this->casts['last_seen_at'] = 'datetime';
         }
     }

@@ -9,10 +9,14 @@ parameters:
         - database
         # Analyses the LastSeen trait in the context of a model that uses it.
         - tests/TestModels
+    # The migration is published as a .stub file.
+    fileExtensions:
+        - php
+        - stub
     level: 10
+    configDirectories:
+        - config
+    checkOctaneCompatibility: true
+    checkModelProperties: true
     ignoreErrors:
         - '#^Class App\\Models\\User not found.#'
-        -
-            message: "#^Called 'env' outside of the config directory which returns null when the config is cached, use 'config'.$#"
-            path: *config/*.php
-

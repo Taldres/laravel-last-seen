@@ -190,7 +190,12 @@ class LastSeenManager
 
     private function threshold(string $key, LastSeenDefaultThreshold $default): int
     {
-        $threshold = config()->integer($key, $default->value);
+        $value = config($key, $default->value);
+        $threshold = $default->seconds($value);
+
+        if ($threshold === null) {
+            throw new InvalidArgumentException("Configuration value for key [{$key}] must be a whole number of seconds, ".get_debug_type($value).' given.');
+        }
 
         if ($threshold < 0) {
             throw new InvalidArgumentException("Configuration value for key [{$key}] must be at least 0, {$threshold} given.");

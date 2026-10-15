@@ -10,6 +10,8 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
+use Taldres\LastSeen\Console\ForgetCommand;
+use Taldres\LastSeen\Enums\LastSeenDefaultThreshold;
 use Taldres\LastSeen\Listeners\LastSeenSubscriber;
 use Taldres\LastSeen\Trait\LastSeen;
 use Throwable;
@@ -20,6 +22,7 @@ class LastSeenServiceProvider extends ServiceProvider
     {
         $this->providePublishing();
         $this->provideAboutSection();
+        $this->provideCommands();
 
         Event::subscribe(LastSeenSubscriber::class);
     }
@@ -32,6 +35,32 @@ class LastSeenServiceProvider extends ServiceProvider
             __DIR__.'/../config/last-seen.php',
             'last-seen'
         );
+
+        $this->normaliseThresholds();
+    }
+
+    /**
+     * The .env file provides the thresholds as strings. Turn digits and empty values into the integers that
+     * config()->integer() and other readers of the configuration expect. Anything else stays as it is, so the
+     * manager rejects it.
+     */
+    private function normaliseThresholds(): void
+    {
+        foreach (['update_threshold' => LastSeenDefaultThreshold::Update, 'recently_seen_threshold' => LastSeenDefaultThreshold::RecentlySeen] as $key => $default) {
+            $value = config("last-seen.{$key}");
+            $seconds = $default->seconds($value);
+
+            if ($seconds !== null && $seconds !== $value) {
+                config(["last-seen.{$key}" => $seconds]);
+            }
+        }
+    }
+
+    private function provideCommands(): void
+    {
+        if ($this->app->runningInConsole()) {
+            $this->commands([ForgetCommand::class]);
+        }
     }
 
     private function providePublishing(): void
@@ -80,9 +109,13 @@ class LastSeenServiceProvider extends ServiceProvider
             $enabled = (bool) config('last-seen.enabled', true);
             $update = config('last-seen.update_threshold');
             $recentlySeen = config('last-seen.recently_seen_threshold');
-            $seconds = fn (mixed $threshold): ?int => is_int($threshold) && $threshold >= 0 ? $threshold : null;
-            $updateSeconds = $seconds($update);
-            $recentlySeenSeconds = $seconds($recentlySeen);
+            $seconds = function (LastSeenDefaultThreshold $default, mixed $threshold): ?int {
+                $value = $default->seconds($threshold);
+
+                return $value !== null && $value >= 0 ? $value : null;
+            };
+            $updateSeconds = $seconds(LastSeenDefaultThreshold::Update, $update);
+            $recentlySeenSeconds = $seconds(LastSeenDefaultThreshold::RecentlySeen, $recentlySeen);
 
             return [
                 'Version' => InstalledVersions::isInstalled('taldres/laravel-last-seen')

@@ -29,17 +29,21 @@ All other settings—such as enabling/disabling the feature, update thresholds, 
 - `LAST_SEEN_UPDATE_THRESHOLD`: Minimum seconds between last_seen_at updates (default: 60)
 - `LAST_SEEN_RECENTLY_SEEN_THRESHOLD`: Seconds a user is considered recently seen after last activity (default: 300)
 
-Both thresholds must be integers of 0 or more. Other values throw an `InvalidArgumentException`, also when they come
-from the `.env` file: `LAST_SEEN_UPDATE_THRESHOLD=banana` is rejected instead of being read as `0`. An entry without a
-value falls back to the default.
+Both thresholds must be whole numbers of 0 or more. A value from the `.env` file may be a string of digits, the
+package turns it into an integer, and an entry without a value falls back to the default. Anything else throws an
+`InvalidArgumentException`, also when it comes from the `.env` file: `LAST_SEEN_UPDATE_THRESHOLD=banana` is rejected
+instead of being read as `0`.
 
 If you published the configuration file before version 1.6.1, it still casts the `.env` values with `(int)`, which turns
-an invalid value into `0`. Publish it again with `--force`, or replace the casts with the calls from the current file:
+an invalid value into `0`. Publish it again with `--force`, or replace the casts with plain `env()` calls:
 
 ```php
-'update_threshold' => LastSeenDefaultThreshold::Update->fromEnv(env('LAST_SEEN_UPDATE_THRESHOLD')),
-'recently_seen_threshold' => LastSeenDefaultThreshold::RecentlySeen->fromEnv(env('LAST_SEEN_RECENTLY_SEEN_THRESHOLD')),
+'update_threshold' => env('LAST_SEEN_UPDATE_THRESHOLD', 60),
+'recently_seen_threshold' => env('LAST_SEEN_RECENTLY_SEEN_THRESHOLD', 300),
 ```
+
+Files published with 1.6.1 or 1.6.2 call `LastSeenDefaultThreshold::Update->fromEnv()` and keep working. Publish them
+again, so the file no longer depends on a class of the package.
 
 Each setting has a default value, so you only need to override them if you want to change the default behavior.
 

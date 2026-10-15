@@ -51,3 +51,36 @@ LastSeen::trackUsing(fn (User $user): bool => ! session()->has('impersonator_id'
   copies. Add `public $deleteWhenMissingModels = true;` to the listener so jobs for deleted users are dropped instead of
   failing, and prune failed jobs. Tools that record events, such as Telescope's event watcher, store the payload as
   well.
+
+## Forgetting Old Values
+
+To keep the data only as long as you need it, forget the values of users who were last seen long ago:
+
+```bash
+php artisan last-seen:forget --days=90
+php artisan last-seen:forget --months=6
+php artisan last-seen:forget --years=1 --months=6
+```
+
+It sets `last_seen_at` to `null` for every user whose value is older than the given age. Users who were
+never seen are not touched, and neither are the rows themselves, so this is not a replacement for Laravel's
+`model:prune`, which deletes models.
+
+The age is given in `--days` (up to 365), `--months` (up to 120) or `--years` (up to 100), alone or combined, so you
+pick the unit that fits. At least one of them must be above 0.
+
+- `--model=` selects another model that uses the trait. The default is the model of `models.user`.
+- `--pretend` only reports how many values would be forgotten.
+- Soft deleted rows are included. `updated_at` and other attributes stay as they are, and no events are fired.
+- Global scopes are ignored, so soft deleted rows and rows of other tenants are included.
+- It runs as a single `UPDATE` statement, so run it when little is going on if the table is large. It also works while
+  `LAST_SEEN_ENABLED` is `false`, and it is only registered in console contexts, such as Artisan and the scheduler.
+- Copies in the queue or in logs are not affected, see [Deleting the Timestamp](#deleting-the-timestamp).
+
+Run it on a schedule, for example in `routes/console.php`:
+
+```php
+use Illuminate\Support\Facades\Schedule;
+
+Schedule::command('last-seen:forget --days=90')->daily();
+```

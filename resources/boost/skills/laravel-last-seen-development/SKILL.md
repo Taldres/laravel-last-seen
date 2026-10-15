@@ -1,6 +1,6 @@
 ---
 name: laravel-last-seen-development
-description: Track and query when users were last active with taldres/laravel-last-seen, including the last_seen_at column, recentlySeen(), ignoring background requests, the onlyRecentlySeen(), notRecentlySeen(), neverSeen(), lastSeenBefore() and lastSeenSince() scopes, UpdateLastSeenMiddleware, the UserWasActiveEvent and LastSeenRecordedEvent events, the LastSeen facade, faking it in tests and opting users out.
+description: Track and query when users were last active with taldres/laravel-last-seen, including the last_seen_at column, recentlySeen(), ignoring background requests, the onlyRecentlySeen(), notRecentlySeen(), neverSeen(), lastSeenBefore() and lastSeenSince() scopes, UpdateLastSeenMiddleware, the UserWasActiveEvent and LastSeenRecordedEvent events, the LastSeen facade, forgetting old values with the last-seen:forget command, faking it in tests and opting users out.
 ---
 
 # Laravel Last Seen Development
@@ -48,8 +48,9 @@ Settings live in `config/last-seen.php` and the `.env` file: `LAST_SEEN_ENABLED`
 (seconds between writes, default 60) and `LAST_SEEN_RECENTLY_SEEN_THRESHOLD` (seconds a user counts as recently
 seen, default 300). Both thresholds must be integers of 0 or more, otherwise they throw an `InvalidArgumentException`;
 an invalid `.env` value is rejected, not cast to 0, and an empty one falls back to the default. A configuration file
-published before 1.6.1 still casts with `(int)`: replace that with `LastSeenDefaultThreshold::Update->fromEnv(...)` and
-`LastSeenDefaultThreshold::RecentlySeen->fromEnv(...)` as in the package's current config file.
+published before 1.6.1 still casts with `(int)`: replace the casts with plain `env('LAST_SEEN_UPDATE_THRESHOLD', 60)` and
+`env('LAST_SEEN_RECENTLY_SEEN_THRESHOLD', 300)` calls as in the current config file. The package turns digit strings
+from the `.env` file into integers itself.
 `php artisan about --only=last_seen` (add `--json` to parse it) shows these settings and whether the user model uses the
 trait (only the class in `models.user`), and marks a missing trait, invalid thresholds and a recently seen threshold
 that is not above the update threshold. Run it to check the setup.
@@ -84,6 +85,12 @@ LastSeen::forget($user);    // same as $user->forgetLastSeenAt(), sets last_seen
 
 Writes only change `last_seen_at`: they do not touch `updated_at`, fire no model events and do not save other unsaved
 attributes. A write is skipped while the stored value is newer than the update threshold.
+
+To keep the data only as long as needed, schedule `php artisan last-seen:forget --days=90`. It sets `last_seen_at` to
+`null` for everyone last seen longer ago than the age from `--days` (up to 365), `--months` (up to 120) and `--years`
+(up to 100), alone or combined (`--model=` for another model, `--pretend` to only count).
+It keeps the rows, includes soft deleted ones, leaves `updated_at` alone, fires no events and works while the package is
+disabled. Do not use Laravel's `Prunable` for this: it deletes rows.
 
 ## Opting Users Out
 

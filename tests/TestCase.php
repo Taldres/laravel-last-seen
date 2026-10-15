@@ -16,6 +16,11 @@ abstract class TestCase extends Orchestra
         ];
     }
 
+    protected function defineDatabaseMigrationsAfterDatabaseRefreshed(): void
+    {
+        createUsersTable();
+    }
+
     protected function getEnvironmentSetUp($app): void
     {
         // The test container uses a self-signed certificate, which ODBC Driver 18 rejects by default.

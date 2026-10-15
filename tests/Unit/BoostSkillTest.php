@@ -20,3 +20,11 @@ it('ships a Boost skill with the frontmatter Boost requires', function (string $
     'laravel-last-seen-development',
     'upgrade-laravel-last-seen-v1',
 ]);
+
+it('ships a short Boost guideline that points to the development skill', function () {
+    $guideline = (string) file_get_contents(__DIR__.'/../../resources/boost/guidelines/core.blade.php');
+
+    expect($guideline)->toStartWith('## Laravel Last Seen')
+        ->toContain('laravel-last-seen-development')
+        ->and(strlen($guideline))->toBeLessThan(1000);
+});

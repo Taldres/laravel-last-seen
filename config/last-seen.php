@@ -3,7 +3,6 @@
 declare(strict_types=1);
 
 use App\Models\User;
-use Taldres\LastSeen\Enums\LastSeenDefaultThreshold;
 
 return [
     'models' => [
@@ -25,12 +24,12 @@ return [
      * This helps to avoid excessive database writes when users are active.
      * Must be 0 or more. Default is 60 seconds.
      */
-    'update_threshold' => LastSeenDefaultThreshold::Update->fromEnv(env('LAST_SEEN_UPDATE_THRESHOLD')),
+    'update_threshold' => env('LAST_SEEN_UPDATE_THRESHOLD', 60),
 
     /*
      * The number of seconds a user is considered recently seen after their last activity.
      * A user counts as recently seen while last_seen_at is at most this many seconds ago.
      * Must be 0 or more. Default is 300 seconds (5 minutes).
      */
-    'recently_seen_threshold' => LastSeenDefaultThreshold::RecentlySeen->fromEnv(env('LAST_SEEN_RECENTLY_SEEN_THRESHOLD')),
+    'recently_seen_threshold' => env('LAST_SEEN_RECENTLY_SEEN_THRESHOLD', 300),
 ];

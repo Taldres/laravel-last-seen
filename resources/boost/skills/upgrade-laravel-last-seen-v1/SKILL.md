@@ -120,7 +120,8 @@ more.
 
 - Search for runtime config changes such as `config(['last-seen.update_threshold' => '60'])` or
   `Config::set('last-seen.recently_seen_threshold', ...)` and pass integers.
-- Make sure the published `config/last-seen.php` still casts both values with `(int)`, like the shipped file.
+- Make sure the published `config/last-seen.php` reads both values with `env()`, like the shipped file. A file from 1.6.1 or 1.6.2 that calls
+  `LastSeenDefaultThreshold::...->fromEnv()` keeps working.
 - Check `LAST_SEEN_UPDATE_THRESHOLD` and `LAST_SEEN_RECENTLY_SEEN_THRESHOLD` in `.env`, `.env.example`,
   `.env.testing` and `phpunit.xml` for negative values. Tell the user to check deployed environments as well.
 

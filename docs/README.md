@@ -27,7 +27,7 @@
 
 ## Privacy
 
-- [Privacy](privacy.md): the stored data, opting users out and deleting the timestamp
+- [Privacy](privacy.md): the stored data, opting users out, deleting the timestamp and forgetting old values
 
 ## More
 

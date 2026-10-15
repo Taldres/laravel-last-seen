@@ -21,6 +21,7 @@ $user->last_seen_at?->diffForHumans() ?? 'never'; // when a user was last seen
 - Query scopes and helper methods to find users who were recently seen, never seen or last seen before a date
 - Configurable thresholds for updating and checking activity
 - Leave out background requests and let users opt out
+- A command to forget old values, to keep the data only as long as needed
 - A fake with assertions for your own tests
 - Migration publishing for easy setup
 
@@ -213,7 +214,7 @@ existing setup.
 
 `last_seen_at` is tied to a user, so it is personal data. The package stores a single `last_seen_at` column, keeps no
 activity history and sends no data to external services. See [Privacy](docs/privacy.md) for what your application
-decides, opting users out and deleting the timestamp.
+decides, opting users out, deleting the timestamp and forgetting old values.
 
 ## Upgrading
 

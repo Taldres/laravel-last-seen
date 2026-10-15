@@ -7,5 +7,7 @@
   untouched and other unsaved changes on the model are not persisted.
 - `$user->forgetLastSeenAt()`: Sets `last_seen_at` to `null`, again without touching `updated_at` or other unsaved
   changes. It works even when the package is disabled.
+- `php artisan last-seen:forget --days=90`: Sets `last_seen_at` to `null` for every user last seen longer ago than the
+  given age (`--days`, `--months` and `--years`), see [Privacy](../privacy.md#forgetting-old-values).
 
 `last_seen_at` is not added to your model's `$fillable`. If you need to mass-assign it, add it there yourself or use `forceFill()`.

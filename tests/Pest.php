@@ -21,15 +21,17 @@ use Taldres\LastSeen\Tests\TestCase;
 
 pest()->extend(TestCase::class)
     ->use(RefreshDatabase::class)
-    ->beforeEach(function () {
-        Schema::create('users', function (Blueprint $table) {
-            $table->id();
-            $table->string('email')->unique();
-            $table->timestamp('last_seen_at')->nullable();
-            $table->timestamps();
-        });
-    })
     ->in('Feature');
+
+function createUsersTable(): void
+{
+    Schema::create('users', function (Blueprint $table) {
+        $table->id();
+        $table->string('email')->unique();
+        $table->timestamp('last_seen_at')->nullable();
+        $table->timestamps();
+    });
+}
 
 function createUnixTimestampUsersTable(): void
 {

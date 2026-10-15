@@ -12,4 +12,5 @@ Schema::table('admins', function (Blueprint $table) {
 
 The middleware records the user of the guard that is authenticated once the request has been handled, so put it on the
 routes that use `auth:admin`, or in the middleware group of the application. The `trackUsing()` callback receives every
-tracked model, so type-hint `Model` instead of a single class.
+tracked model, so type-hint `Model` instead of a single class. To forget old values of another model, pass it to
+`php artisan last-seen:forget --days=90 --model="App\Models\Admin"`.

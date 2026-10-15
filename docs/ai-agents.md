@@ -6,4 +6,5 @@ The package ships two [Laravel Boost](https://laravel.com/framework/docs/boost) 
 - `upgrade-laravel-last-seen-v1` walks agents through the upgrade from 0.4 to 1.0.
 
 Boost offers to install them when you run `php artisan boost:install`, or `php artisan boost:update --discover` in an
-existing setup.
+existing setup. It also takes over a short guideline that tells agents the package is installed and points them to the
+development skill. `boost:update` keeps it current.

@@ -113,7 +113,7 @@ it('records, scopes and forgets on the connection of the model, including its ta
     });
 
     $default = User::forceCreate(['email' => fake()->email(), 'last_seen_at' => now()->subHour()]);
-    $secondary = SecondaryConnectionUser::forceCreate(['email' => fake()->email(), 'last_seen_at' => now()->subHour()]);
+    $secondary = SecondaryConnectionUser::forceCreate(['id' => $default->id, 'email' => fake()->email(), 'last_seen_at' => now()->subHour()]);
 
     expect($secondary->id)->toBe($default->id)
         ->and(LastSeen::record($secondary))->toBeTrue()
@@ -135,7 +135,7 @@ it('records, scopes and forgets on a connection chosen with on()', function () {
     });
 
     $default = User::forceCreate(['email' => fake()->email(), 'last_seen_at' => now()->subHour()]);
-    $user = User::on('secondary')->forceCreate(['email' => fake()->email(), 'last_seen_at' => now()->subHour()]);
+    $user = User::on('secondary')->forceCreate(['id' => $default->id, 'email' => fake()->email(), 'last_seen_at' => now()->subHour()]);
 
     expect($user->id)->toBe($default->id)
         ->and(LastSeen::record($user))->toBeTrue()

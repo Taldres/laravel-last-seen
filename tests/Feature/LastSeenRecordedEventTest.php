@@ -283,11 +283,6 @@ it('hands the listener the model that was just recorded', function () {
 });
 
 it('dispatches after the transaction commits and drops the event when it rolls back', function () {
-    // The DDL in the test setup commits implicitly on these databases, which ends the transaction RefreshDatabase opened.
-    if (in_array(DB::getDriverName(), ['mysql', 'mariadb'], true)) {
-        test()->markTestSkipped('MySQL and MariaDB commit the test transaction when the tables are created.');
-    }
-
     $calls = 0;
     Event::listen(LastSeenRecordedEvent::class, function () use (&$calls) {
         $calls++;

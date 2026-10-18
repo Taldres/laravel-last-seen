@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "laravel-boost": {
+      "command": "vendor/bin/testbench",
+      "args": ["boost:mcp"],
+      "env": {
+        "APP_ENV": "local",
+        "APP_DEBUG": "true"
+      }
+    }
+  }
+}

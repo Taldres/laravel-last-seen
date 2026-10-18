@@ -31,6 +31,7 @@
   },
   "require-dev": {
     "larastan/larastan": "^3.6.0",
+    "laravel/boost": "^2.0",
     "laravel/pint": "^1.29",
     "orchestra/testbench": "^10.0|^11.0",
     "pestphp/pest": "^3.8.2|^4.0",
@@ -66,6 +67,16 @@
   "minimum-stability": "stable",
   "prefer-stable": true,
   "scripts": {
+    "post-autoload-dump": [
+      "@clear",
+      "@prepare"
+    ],
+    "prepare": [
+      "@php vendor/bin/testbench package:discover --ansi"
+    ],
+    "clear": [
+      "@php vendor/bin/testbench package:purge-skeleton --ansi"
+    ],
     "lint": [
       "vendor/bin/pint --parallel"
     ],
